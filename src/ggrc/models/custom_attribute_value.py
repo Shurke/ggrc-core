@@ -51,7 +51,7 @@ class CustomAttributeValue(base.ContextRBAC, Base, Indexed, db.Model):
   attributable_type = db.Column(db.String)
   attribute_value = db.Column(db.String, nullable=False, default=u"")
 
-  # When the attibute is of a mapping type this will hold the id of the mapped
+  # When the attribute is of a mapping type this will hold the id of the mapped
   # object while attribute_value will hold the type name.
   # For example an instance of attribute type Map:Person will have a person id
   # in attribute_object_id and string 'Person' in attribute_value.
@@ -76,11 +76,6 @@ class CustomAttributeValue(base.ContextRBAC, Base, Indexed, db.Model):
     """Latest revision of CAV (used for comment precondition check)."""
     # TODO: make eager_query fetch only the first Revision
     return self._related_revisions[0]
-
-  def delere_record(self):
-    get_indexer().delete_record(self.attributable_id,
-                                self.attributable_type,
-                                False)
 
   def get_reindex_pair(self):
     return (self.attributable_type, self.attributable_id)
