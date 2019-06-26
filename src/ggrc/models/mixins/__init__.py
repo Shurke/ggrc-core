@@ -32,6 +32,8 @@ from ggrc.models import reflection
 from ggrc.models import exceptions
 from ggrc.models.deferred import deferred
 from ggrc.models.mixins.customattributable import CustomAttributable
+from ggrc.models.mixins.external_customattributable \
+    import ExternalCustomAttributable
 from ggrc.models.mixins.notifiable import Notifiable
 from ggrc.models.mixins.base import Base
 from ggrc.models.utils import validate_option
@@ -860,6 +862,7 @@ __all__ = [
     "Base",
     "BusinessObject",
     "CustomAttributable",
+    "ExternalCustomAttributable",
     "Described",
     "FinishedDate",
     "Noted",
