@@ -639,9 +639,12 @@ def get_attributes_json():
       attrs = models.CustomAttributeDefinition.eager_query().filter(
           models.CustomAttributeDefinition.definition_id.is_(None)
       ).all()
+      ext_attrs = models.ExternalCustomAttributeDefinition.eager_query().all()
     with benchmark("Get attributes JSON: publish"):
       published = []
       for attr in attrs:
+        published.append(builder_json.publish(attr))
+      for attr in ext_attrs:
         published.append(builder_json.publish(attr))
       published = builder_json.publish_representation(published)
     with benchmark("Get attributes JSON: json"):
@@ -696,6 +699,12 @@ def get_all_attributes_json(load_custom_attributes=False):
       definitions = models.CustomAttributeDefinition.eager_query().group_by(
           models.CustomAttributeDefinition.title,
           models.CustomAttributeDefinition.definition_type)
+      for attr in definitions:
+        ca_cache[attr.definition_type].append(attr)
+      ecad = models.ExternalCustomAttributeDefinition
+      definitions = ecad.eager_query().group_by(
+          models.ExternalCustomAttributeDefinition.title,
+          models.ExternalCustomAttributeDefinition.definition_type)
       for attr in definitions:
         ca_cache[attr.definition_type].append(attr)
     for model in models.all_models.all_models:
