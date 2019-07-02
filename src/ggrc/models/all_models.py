@@ -40,6 +40,10 @@ from ggrc.models.directive import Standard
 from ggrc.models.document import Document
 from ggrc.models.event import Event
 from ggrc.models.evidence import Evidence
+from ggrc.models.external_custom_attribute_definition \
+    import ExternalCustomAttributeDefinition
+from ggrc.models.external_custom_attribute_value \
+    import ExternalCustomAttributeValue
 from ggrc.models.facility import Facility
 from ggrc.models.import_export import ImportExport
 from ggrc.models.issue import Issue
@@ -116,6 +120,8 @@ all_models = [  # pylint: disable=invalid-name
     Document,
     Event,
     Evidence,
+    ExternalCustomAttributeDefinition,
+    ExternalCustomAttributeValue,
     ExternalComment,
     Facility,
     ImportExport,
