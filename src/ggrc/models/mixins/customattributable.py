@@ -579,3 +579,29 @@ class CustomAttributable(object):
   def invalidate_evidence_found(self):
     """Invalidate the cached value"""
     self._requirement_cache = None
+
+
+class CustomAttributeMapable(object):
+  # pylint: disable=too-few-public-methods
+  # because this is a mixin
+  """Mixin. Setup for models that can be mapped as CAV value."""
+
+  @declared_attr
+  def related_custom_attributes(cls):  # pylint: disable=no-self-argument
+    """CustomAttributeValues that directly map to this object.
+
+    Used just to get the backrefs on the CustomAttributeValue object.
+
+    Returns:
+       a sqlalchemy relationship
+    """
+    from ggrc.models.custom_attribute_value import CustomAttributeValue
+
+    return db.relationship(
+        'CustomAttributeValue',
+        primaryjoin=lambda: (
+            (CustomAttributeValue.attribute_value == cls.__name__) &
+            (CustomAttributeValue.attribute_object_id == cls.id)),
+        foreign_keys="CustomAttributeValue.attribute_object_id",
+        backref='attribute_{0}'.format(cls.__name__),
+        viewonly=True)

@@ -15,8 +15,8 @@ from ggrc.models.exceptions import ValidationError
 from ggrc.models.deferred import deferred
 from ggrc.models.mixins import base
 from ggrc.models.mixins import Base, CustomAttributable
-from ggrc.models.custom_attribute_definition import CustomAttributeMapable
 from ggrc.models import reflection
+from ggrc.models.mixins.customattributable import CustomAttributeMapable
 from ggrc.models.relationship import Relatable
 from ggrc.models.utils import validate_option
 from ggrc.rbac import SystemWideRoles
