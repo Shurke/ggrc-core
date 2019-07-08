@@ -3,59 +3,38 @@
 
 """Custom attribute value model"""
 
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy import and_
 from sqlalchemy import or_
 from sqlalchemy import orm
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import foreign
 
 from ggrc import builder
 from ggrc import db
-from ggrc.models.mixins import base
-from ggrc.models.mixins import Base
-from ggrc.models.revision import Revision
-from ggrc.models import reflection
 from ggrc import utils
-from ggrc.fulltext.mixin import Indexed
-from ggrc.fulltext import get_indexer
+from ggrc.fulltext import mixin as ft_mixin
+from ggrc.models import reflection
+from ggrc.models.mixins import base
+from ggrc.models.revision import Revision
 from ggrc.utils import url_parser
 
 
-class CustomAttributeValue(base.ContextRBAC, Base, Indexed, db.Model):
-  """Custom attribute value model"""
+class CustomAttributeValueBase(base.ContextRBAC,
+                               base.Base,
+                               ft_mixin.Indexed,
+                               db.Model):
+  """Custom attribute value base class"""
+  __abstract__ = True
 
-  __tablename__ = 'custom_attribute_values'
-
-  _api_attrs = reflection.ApiAttributes(
-      'custom_attribute_id',
-      'attributable_id',
-      'attributable_type',
-      'attribute_value',
-      'attribute_object',
-      reflection.Attribute('preconditions_failed',
-                           create=False,
-                           update=False),
-  )
-  _fulltext_attrs = ["attribute_value"]
   REQUIRED_GLOBAL_REINDEX = False
 
-  _sanitize_html = [
-      "attribute_value",
-  ]
-
-  custom_attribute_id = db.Column(
-      db.Integer,
-      db.ForeignKey('custom_attribute_definitions.id', ondelete="CASCADE")
-  )
-  attributable_id = db.Column(db.Integer)
   attributable_type = db.Column(db.String)
+  attributable_id = db.Column(db.Integer)
   attribute_value = db.Column(db.String, nullable=False, default=u"")
 
-  # When the attribute is of a mapping type this will hold the id of the mapped
-  # object while attribute_value will hold the type name.
-  # For example an instance of attribute type Map:Person will have a person id
-  # in attribute_object_id and string 'Person' in attribute_value.
-  attribute_object_id = db.Column(db.Integer)
+  _fulltext_attrs = ["attribute_value"]
+
+  _sanitize_html = ["attribute_value"]
 
   # pylint: disable=protected-access
   # This is just a mapping for accessing local functions so protected access
@@ -66,44 +45,8 @@ class CustomAttributeValue(base.ContextRBAC, Base, Indexed, db.Model):
       "Date": lambda self: self._validate_date(),
       "Dropdown": lambda self: self._validate_dropdown(),
       "Multiselect": lambda self: self._validate_multiselect(),
-      "Map:Person": lambda self: self._validate_map_object(),
-      "Checkbox": lambda self: self._validate_checkbox(),
   }
   TYPES_NO_RICHTEXT_VALIDATE = ["Control"]
-
-  @property
-  def latest_revision(self):
-    """Latest revision of CAV (used for comment precondition check)."""
-    # TODO: make eager_query fetch only the first Revision
-    return self._related_revisions[0]
-
-  def get_reindex_pair(self):
-    return (self.attributable_type, self.attributable_id)
-
-  @declared_attr
-  def _related_revisions(cls):  # pylint: disable=no-self-argument
-    def join_function():
-      """Function to join CAV to its latest revision."""
-      resource_id = foreign(Revision.resource_id)
-      resource_type = foreign(Revision.resource_type)
-      return and_(resource_id == cls.id,
-                  resource_type == "CustomAttributeValue")
-
-    return db.relationship(
-        Revision,
-        primaryjoin=join_function,
-        viewonly=True,
-        order_by=Revision.created_at.desc(),
-    )
-
-  @classmethod
-  def eager_query(cls, **kwargs):
-    query = super(CustomAttributeValue, cls).eager_query(**kwargs)
-    query = query.options(
-        orm.subqueryload('_related_revisions'),
-        orm.joinedload('custom_attribute'),
-    )
-    return query
 
   @property
   def attributable_attr(self):
@@ -119,6 +62,153 @@ class CustomAttributeValue(base.ContextRBAC, Base, Indexed, db.Model):
     self.attributable_type = value.__class__.__name__ if value is not None \
         else None
     return setattr(self, self.attributable_attr, value)
+
+  @staticmethod
+  def _extra_table_args(_):
+    return (
+        db.UniqueConstraint('attributable_id', 'custom_attribute_id'),
+    )
+
+  @property
+  def latest_revision(self):
+    """Latest revision of CAV (used for comment precondition check)."""
+    # TODO: make eager_query fetch only the first Revision
+    return self._related_revisions[0]
+
+  def get_reindex_pair(self):
+    return self.attributable_type, self.attributable_id
+
+  @classmethod
+  def eager_query(cls, **kwargs):
+    query = super(CustomAttributeValueBase, cls).eager_query(**kwargs)
+    query = query.options(
+        orm.subqueryload('_related_revisions'),
+        orm.joinedload('custom_attribute'),
+    )
+    return query
+
+  @declared_attr
+  def _related_revisions(cls):  # pylint: disable=no-self-argument
+    def join_function():
+      """Function to join CAV to its latest revision."""
+      resource_id = foreign(Revision.resource_id)
+      resource_type = foreign(Revision.resource_type)
+      return and_(resource_id == cls.id,
+                  resource_type == cls.type)
+
+    return db.relationship(
+        Revision,
+        primaryjoin=join_function,
+        viewonly=True,
+        order_by=Revision.created_at.desc(),
+    )
+
+  def _clone(self, obj):
+    """Clone a custom value to a new object."""
+    data = {
+        "custom_attribute_id": self.custom_attribute_id,
+        "attributable_id": obj.id,
+        "attributable_type": self.attributable_type,
+        "attribute_value": self.attribute_value,
+        "attribute_object_id": self.attribute_object_id
+    }
+    ca_value = self.__class__(**data)
+    db.session.add(ca_value)
+    db.session.flush()
+    return ca_value
+
+  def _validate_dropdown(self):
+    """Validate dropdown option."""
+    valid_options = set(self.custom_attribute.multi_choice_options.split(","))
+    if self.attribute_value:
+      self.attribute_value = self.attribute_value.strip()
+      if self.attribute_value not in valid_options:
+        raise ValueError("Invalid custom attribute dropdown option: {v}, "
+                         "expected one of {l}"
+                         .format(v=self.attribute_value, l=valid_options))
+
+  def _validate_date(self):
+    """Convert date format."""
+    if self.attribute_value:
+      # Validate the date format by trying to parse it
+      self.attribute_value = utils.convert_date_format(
+          self.attribute_value,
+          utils.DATE_FORMAT_ISO,
+          utils.DATE_FORMAT_ISO,
+      )
+
+  def _validate_text(self):
+    """Trim whitespaces."""
+    if self.attribute_value:
+      self.attribute_value = self.attribute_value.strip()
+
+  def _validate_rich_text(self):
+    """Add tags for links."""
+    if self.attributable_type not in self.TYPES_NO_RICHTEXT_VALIDATE:
+      self.attribute_value = url_parser.parse(self.attribute_value)
+
+  def _validate_multiselect(self):
+    """Validate multiselect checkbox values."""
+    if self.attribute_value:
+      valid_options = set(
+          self.custom_attribute.multi_choice_options.split(","))
+      attr_values = set(self.attribute_value.split(","))
+      if not attr_values.issubset(valid_options):
+        raise ValueError("Invalid custom attribute multiselect options {act}. "
+                         "Expected some of {exp}".format(act=attr_values,
+                                                         exp=valid_options))
+
+  def validate(self):
+    """Validate custom attribute value."""
+    # pylint: disable=protected-access
+    attributable_type = self.attributable._inflector.table_singular
+    if not self.custom_attribute:
+      raise ValueError("Custom attribute definition not found: Can not "
+                       "validate custom attribute value")
+    if self.custom_attribute.definition_type != attributable_type:
+      raise ValueError("Invalid custom attribute definition used.")
+    validator = self._validator_map.get(self.custom_attribute.attribute_type)
+    if validator:
+      validator(self)
+
+
+class CustomAttributeValue(CustomAttributeValueBase):
+  """Custom attribute value model"""
+
+  __tablename__ = 'custom_attribute_values'
+
+  # When the attribute is of a mapping type this will hold the id of the mapped
+  # object while attribute_value will hold the type name.
+  # For example an instance of attribute type Map:Person will have a person id
+  # in attribute_object_id and string 'Person' in attribute_value.
+  attribute_object_id = db.Column(db.Integer)
+
+  custom_attribute_id = db.Column(
+      db.Integer,
+      db.ForeignKey('custom_attribute_definitions.id',
+                    ondelete="CASCADE")
+  )
+
+  _api_attrs = reflection.ApiAttributes(
+      'custom_attribute_id',
+      'attributable_id',
+      'attributable_type',
+      'attribute_value',
+      'attribute_object',
+      reflection.Attribute('preconditions_failed',
+                           create=False,
+                           update=False),
+  )
+
+  _validator_map = {
+      "Text": lambda self: self._validate_text(),
+      "Rich Text": lambda self: self._validate_rich_text(),
+      "Date": lambda self: self._validate_date(),
+      "Dropdown": lambda self: self._validate_dropdown(),
+      "Multiselect": lambda self: self._validate_multiselect(),
+      "Map:Person": lambda self: self._validate_map_object(),
+      "Checkbox": lambda self: self._validate_checkbox(),
+  }
 
   @property
   def attribute_object(self):
@@ -218,25 +308,10 @@ class CustomAttributeValue(base.ContextRBAC, Base, Indexed, db.Model):
       ).exists()
     return filter_by_custom
 
-  def _clone(self, obj):
-    """Clone a custom value to a new object."""
-    data = {
-        "custom_attribute_id": self.custom_attribute_id,
-        "attributable_id": obj.id,
-        "attributable_type": self.attributable_type,
-        "attribute_value": self.attribute_value,
-        "attribute_object_id": self.attribute_object_id
-    }
-    ca_value = CustomAttributeValue(**data)
-    db.session.add(ca_value)
-    db.session.flush()
-    return ca_value
-
-  @staticmethod
-  def _extra_table_args(_):
-    return (
-        db.UniqueConstraint('attributable_id', 'custom_attribute_id'),
-    )
+  def _validate_checkbox(self):
+    """Set falsy value to zero."""
+    if not self.attribute_value:
+      self.attribute_value = "0"
 
   def _validate_map_object(self):
     """Validate and correct mapped object values
@@ -317,65 +392,6 @@ class CustomAttributeValue(base.ContextRBAC, Base, Indexed, db.Model):
     if not object_existence:
       raise ValueError('Invalid attribute value: %s' %
                        self.custom_attribute.title)
-
-  def _validate_dropdown(self):
-    """Validate dropdown option."""
-    valid_options = set(self.custom_attribute.multi_choice_options.split(","))
-    if self.attribute_value:
-      self.attribute_value = self.attribute_value.strip()
-      if self.attribute_value not in valid_options:
-        raise ValueError("Invalid custom attribute dropdown option: {v}, "
-                         "expected one of {l}"
-                         .format(v=self.attribute_value, l=valid_options))
-
-  def _validate_date(self):
-    """Convert date format."""
-    if self.attribute_value:
-      # Validate the date format by trying to parse it
-      self.attribute_value = utils.convert_date_format(
-          self.attribute_value,
-          utils.DATE_FORMAT_ISO,
-          utils.DATE_FORMAT_ISO,
-      )
-
-  def _validate_text(self):
-    """Trim whitespaces."""
-    if self.attribute_value:
-      self.attribute_value = self.attribute_value.strip()
-
-  def _validate_rich_text(self):
-    """Add tags for links."""
-    if self.attributable_type not in self.TYPES_NO_RICHTEXT_VALIDATE:
-      self.attribute_value = url_parser.parse(self.attribute_value)
-
-  def _validate_checkbox(self):
-    """Set falsy value to zero."""
-    if not self.attribute_value:
-      self.attribute_value = "0"
-
-  def _validate_multiselect(self):
-    """Validate multiselect checkbox values."""
-    if self.attribute_value:
-      valid_options = set(
-          self.custom_attribute.multi_choice_options.split(","))
-      attr_values = set(self.attribute_value.split(","))
-      if not attr_values.issubset(valid_options):
-        raise ValueError("Invalid custom attribute multiselect options {act}. "
-                         "Expected some of {exp}".format(act=attr_values,
-                                                         exp=valid_options))
-
-  def validate(self):
-    """Validate custom attribute value."""
-    # pylint: disable=protected-access
-    attributable_type = self.attributable._inflector.table_singular
-    if not self.custom_attribute:
-      raise ValueError("Custom attribute definition not found: Can not "
-                       "validate custom attribute value")
-    if self.custom_attribute.definition_type != attributable_type:
-      raise ValueError("Invalid custom attribute definition used.")
-    validator = self._validator_map.get(self.custom_attribute.attribute_type)
-    if validator:
-      validator(self)
 
   @builder.simple_property
   def is_empty(self):
