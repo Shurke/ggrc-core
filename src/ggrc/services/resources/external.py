@@ -54,3 +54,32 @@ class ExternalResource(common.Resource):
     obj.modified_by = get_current_user()
 
     db.session.add(obj)
+
+
+class ExternalCADResource(common.Resource):
+  """Resource handler for External Custom Attribute Definitions"""
+
+  def build_collection_representation(self, *args, **kwargs):
+    """Mask external Custom attribute definitions for JSON response"""
+    resp = super(ExternalCADResource, self).build_collection_representation(
+        *args, **kwargs
+    )
+    if "external_custom_attribute_definitions_collection" in resp:
+      col = resp.pop("external_custom_attribute_definitions_collection", {})
+      if "external_custom_attribute_definitions" in col:
+        col["custom_attribute_definitions"] = col.pop(
+            "external_custom_attribute_definitions"
+        )
+      resp["custom_attribute_definitions_collection"] = col
+    return resp
+
+  def object_for_json(self, *args, **kwargs):
+    """Mask external Custom attribute definitions for JSON response"""
+    resp = super(ExternalCADResource, self).object_for_json(*args, **kwargs)
+    if "external_custom_attribute_definition" in resp:
+      resp["custom_attribute_definition"] = resp.pop(
+          "external_custom_attribute_definition",
+          {}
+      )
+    return resp
+
