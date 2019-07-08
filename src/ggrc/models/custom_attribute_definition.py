@@ -17,7 +17,6 @@ from ggrc.models.mixins import attributevalidator
 from ggrc import builder
 from ggrc.models import mixins
 from ggrc.models.mixins import base
-from ggrc.models.custom_attribute_value import CustomAttributeValue
 from ggrc.access_control import role as acr
 from ggrc.models.exceptions import ValidationError
 from ggrc.models import reflection
@@ -25,123 +24,14 @@ from ggrc.cache import memcache
 from ggrc.utils import validators
 
 
-@memcache.cached
-def get_inflector_model_name_pairs():
-  """Returns pairs with asociation between definition_type and model_name"""
-  from ggrc.models import all_models
-  return [(m._inflector.table_singular, m.__name__)
-          for m in all_models.all_models]
-
-
-def get_inflector_model_name_dict():
-  return dict(get_inflector_model_name_pairs())
-
-
-class CustomAttributeDefinition(attributevalidator.AttributeValidator,
-                                base.ContextRBAC, mixins.Base, mixins.Titled,
-                                db.Model):
-  """Custom attribute definition model.
-
-  Attributes:
-    multi_choice_mandatory: comma separated values of mandatory bitmaps.
-      First lsb is for comment, second bit is for attachement.
+class CustomAttributeDefinitionBase(attributevalidator.AttributeValidator,
+                                    base.ContextRBAC,
+                                    mixins.Base,
+                                    mixins.Titled,
+                                    db.Model):
+  """CustomAttributeDefinition and ExternalCustomAttributeDefinition base class
   """
-
-  __tablename__ = 'custom_attribute_definitions'
-
-  definition_type = db.Column(db.String, nullable=False)
-  definition_id = db.Column(db.Integer)
-  attribute_type = db.Column(db.String, nullable=False)
-  multi_choice_options = db.Column(db.String)
-  multi_choice_mandatory = db.Column(db.String)
-  mandatory = db.Column(db.Boolean)
-  helptext = db.Column(db.String)
-  placeholder = db.Column(db.String)
-
-  attribute_values = db.relationship('CustomAttributeValue',
-                                     backref='custom_attribute',
-                                     cascade='all, delete-orphan')
-
-  @property
-  def definition_attr(self):
-    return '{0}_definition'.format(self.definition_type)
-
-  @property
-  def definition(self):
-    return getattr(self, self.definition_attr)
-
-  @property
-  def value_mapping(self):
-    return self.ValidTypes.DEFAULT_VALUE_MAPPING.get(self.attribute_type) or {}
-
-  @classmethod
-  def get_default_value_for(cls, attribute_type):
-    return cls.ValidTypes.DEFAULT_VALUE.get(attribute_type)
-
-  @builder.simple_property
-  def default_value(self):
-    return self.get_default_value_for(self.attribute_type)
-
-  def get_indexed_value(self, value):
-    return self.value_mapping.get(value, value)
-
-  @definition.setter
-  def definition(self, value):
-    self.definition_id = getattr(value, 'id', None)
-    if hasattr(value, '_inflector'):
-      self.definition_type = value._inflector.table_singular
-    else:
-      self.definition_type = ''
-    return setattr(self, self.definition_attr, value)
-
-  _extra_table_args = (
-      UniqueConstraint('definition_type', 'definition_id', 'title',
-                       name='uq_custom_attribute'),
-      db.Index('ix_custom_attributes_title', 'title'))
-
-  _include_links = [
-      'definition_type',
-      'definition_id',
-      'attribute_type',
-      'multi_choice_options',
-      'multi_choice_mandatory',
-      'mandatory',
-      'helptext',
-      'placeholder',
-  ]
-
-  _api_attrs = reflection.ApiAttributes(
-      reflection.Attribute("default_value",
-                           read=True,
-                           create=False,
-                           update=False),
-      *_include_links)
-
-  _sanitize_html = [
-      "multi_choice_options",
-      "helptext",
-      "placeholder",
-  ]
-
-  _reserved_names = {}
-
-  def _clone(self, target):
-    """Clone custom attribute definitions."""
-    data = {
-        "title": self.title,
-        "definition_type": self.definition_type,
-        "definition_id": target.id,
-        "context": target.context,
-        "attribute_type": self.attribute_type,
-        "multi_choice_options": self.multi_choice_options,
-        "multi_choice_mandatory": self.multi_choice_mandatory,
-        "mandatory": self.mandatory,
-        "helptext": self.helptext,
-        "placeholder": self.placeholder,
-    }
-    ca_definition = CustomAttributeDefinition(**data)
-    db.session.add(ca_definition)
-    return ca_definition
+  __abstract__ = True
 
   class ValidTypes(object):
     """Class representing valid custom attribute definitions.
@@ -175,22 +65,35 @@ class CustomAttributeDefinition(attributevalidator.AttributeValidator,
         },
     }
 
-  class MultiChoiceMandatoryFlags(object):
-    """Enum representing flags in multi_choice_mandatory bitmaps."""
-    # pylint: disable=too-few-public-methods
-    COMMENT_REQUIRED = 0b001
-    EVIDENCE_REQUIRED = 0b010
-    URL_REQUIRED = 0b100
+  definition_type = db.Column(db.String, nullable=False)
+  attribute_type = db.Column(db.String, nullable=False)
+  multi_choice_options = db.Column(db.String)
+  mandatory = db.Column(db.Boolean)
+  helptext = db.Column(db.String)
+  placeholder = db.Column(db.String)
 
-  VALID_TYPES = {
-      "Text": "Text",
-      "Rich Text": "Rich Text",
-      "Dropdown": "Dropdown",
-      "Checkbox": "Checkbox",
-      "Multiselect": "Multiselect",
-      "Date": "Date",
-      "Person": "Map:Person",
-  }
+  _sanitize_html = [
+      "multi_choice_options",
+      "helptext",
+      "placeholder",
+  ]
+
+  _reserved_names = {}
+
+  @classmethod
+  def get_default_value_for(cls, attribute_type):
+    return cls.ValidTypes.DEFAULT_VALUE.get(attribute_type)
+
+  @builder.simple_property
+  def default_value(self):
+    return self.get_default_value_for(self.attribute_type)
+
+  @property
+  def value_mapping(self):
+    return self.ValidTypes.DEFAULT_VALUE_MAPPING.get(self.attribute_type) or {}
+
+  def get_indexed_value(self, value):
+    return self.value_mapping.get(value, value)
 
   @validates("attribute_type")
   def validate_attribute_type(self, _, value):
@@ -219,6 +122,96 @@ class CustomAttributeDefinition(attributevalidator.AttributeValidator,
       value = ",".join(value_list)
 
     return value
+
+
+class CustomAttributeDefinition(CustomAttributeDefinitionBase):
+  """Custom attribute definition model."""
+
+  __tablename__ = 'custom_attribute_definitions'
+
+  class MultiChoiceMandatoryFlags(object):
+    """Enum representing flags in multi_choice_mandatory bitmaps."""
+    # pylint: disable=too-few-public-methods
+    COMMENT_REQUIRED = 0b001
+    EVIDENCE_REQUIRED = 0b010
+    URL_REQUIRED = 0b100
+
+  VALID_TYPES = {
+      "Text": "Text",
+      "Rich Text": "Rich Text",
+      "Dropdown": "Dropdown",
+      "Checkbox": "Checkbox",
+      "Multiselect": "Multiselect",
+      "Date": "Date",
+      "Person": "Map:Person",
+  }
+
+  definition_id = db.Column(db.Integer)
+  multi_choice_mandatory = db.Column(db.String)
+
+  attribute_values = db.relationship('CustomAttributeValue',
+                                     backref='custom_attribute',
+                                     cascade='all, delete-orphan')
+
+  _extra_table_args = (
+      UniqueConstraint('definition_type',
+                       'definition_id',
+                       'title',
+                       name='uq_custom_attribute'),
+      db.Index('ix_custom_attributes_title', 'title'))
+
+  _include_links = [
+      'definition_type',
+      'definition_id',
+      'attribute_type',
+      'multi_choice_options',
+      'multi_choice_mandatory',
+      'mandatory',
+      'helptext',
+      'placeholder',
+  ]
+
+  _api_attrs = reflection.ApiAttributes(
+      reflection.Attribute("default_value",
+                           read=True,
+                           create=False,
+                           update=False),
+      *_include_links)
+
+  @property
+  def definition_attr(self):
+    return '{0}_definition'.format(self.definition_type)
+
+  @property
+  def definition(self):
+    return getattr(self, self.definition_attr)
+
+  @definition.setter
+  def definition(self, value):
+    self.definition_id = getattr(value, 'id', None)
+    if hasattr(value, '_inflector'):
+      self.definition_type = value._inflector.table_singular
+    else:
+      self.definition_type = ''
+    return setattr(self, self.definition_attr, value)
+
+  def _clone(self, target):
+    """Clone custom attribute definitions."""
+    data = {
+        "title": self.title,
+        "definition_type": self.definition_type,
+        "definition_id": target.id,
+        "context": target.context,
+        "attribute_type": self.attribute_type,
+        "multi_choice_options": self.multi_choice_options,
+        "multi_choice_mandatory": self.multi_choice_mandatory,
+        "mandatory": self.mandatory,
+        "helptext": self.helptext,
+        "placeholder": self.placeholder,
+    }
+    ca_definition = CustomAttributeDefinition(**data)
+    db.session.add(ca_definition)
+    return ca_definition
 
   @validates("multi_choice_mandatory")
   def validate_multi_choice_mandatory(self, _, value):
@@ -327,12 +320,6 @@ class CustomAttributeDefinition(attributevalidator.AttributeValidator,
 
     return value
 
-  def log_json(self):
-    """Add extra fields to be logged in CADs."""
-    results = super(CustomAttributeDefinition, self).log_json()
-    results["default_value"] = self.default_value
-    return results
-
   @staticmethod
   def assert_acr_exist(name, definition_type):
     """Validate that there is no ACR with provided name."""
@@ -343,22 +330,44 @@ class CustomAttributeDefinition(attributevalidator.AttributeValidator,
           errors.DUPLICATE_CUSTOM_ROLE.format(role_name=name)
       )
 
+  def log_json(self):
+    """Add extra fields to be logged in CADs."""
+    results = super(CustomAttributeDefinition, self).log_json()
+    results["default_value"] = self.default_value
+    return results
+
 
 sa.event.listen(
     CustomAttributeDefinition,
     "before_insert",
     validators.validate_definition_type_ggrcq
 )
+
+
 sa.event.listen(
     CustomAttributeDefinition,
     "before_update",
     validators.validate_definition_type_ggrcq
 )
+
+
 sa.event.listen(
     CustomAttributeDefinition,
     "before_delete",
     validators.validate_definition_type_ggrcq
 )
+
+
+@memcache.cached
+def get_inflector_model_name_pairs():
+  """Returns pairs with asociation between definition_type and model_name"""
+  from ggrc.models import all_models
+  return [(m._inflector.table_singular, m.__name__)
+          for m in all_models.all_models]
+
+
+def get_inflector_model_name_dict():
+  return dict(get_inflector_model_name_pairs())
 
 
 @memcache.cached
@@ -420,27 +429,3 @@ def get_custom_attributes_for(model_name, instance_id=None):
      model_name in models.mixins.CustomAttributable.MODELS_WITH_LOCAL_CADS:
     cads.extend(get_local_cads(definition_type, instance_id))
   return cads
-
-
-class CustomAttributeMapable(object):
-  # pylint: disable=too-few-public-methods
-  # because this is a mixin
-  """Mixin. Setup for models that can be mapped as CAV value."""
-
-  @declared_attr
-  def related_custom_attributes(cls):  # pylint: disable=no-self-argument
-    """CustomAttributeValues that directly map to this object.
-
-    Used just to get the backrefs on the CustomAttributeValue object.
-
-    Returns:
-       a sqlalchemy relationship
-    """
-    return db.relationship(
-        'CustomAttributeValue',
-        primaryjoin=lambda: (
-            (CustomAttributeValue.attribute_value == cls.__name__) &
-            (CustomAttributeValue.attribute_object_id == cls.id)),
-        foreign_keys="CustomAttributeValue.attribute_object_id",
-        backref='attribute_{0}'.format(cls.__name__),
-        viewonly=True)
