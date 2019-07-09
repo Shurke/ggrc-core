@@ -6,9 +6,7 @@
 import collections
 from logging import getLogger
 
-import sqlalchemy
-from sqlalchemy import and_
-from sqlalchemy import or_
+import sqlalchemy as sa
 from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import foreign
@@ -36,8 +34,8 @@ class ExternalCustomAttributable(CustomAttributableBase):
     def join_function():
       """Object and CAD join function."""
       definition_type = foreign(ExternalCustomAttributeDefinition.definition_type)
-      return and_(definition_type == cls._inflector.table_singular,
-                  or_(cls.id != ExternalCustomAttributeDefinition.id,  #TODO FIND SOLUTION!!!!!!!
+      return sa.and_(definition_type == cls._inflector.table_singular,
+                  sa.or_(cls.id != ExternalCustomAttributeDefinition.id,  #TODO FIND SOLUTION!!!!!!!
                       cls.id == ExternalCustomAttributeDefinition.id))
 
     return relationship(
@@ -239,7 +237,7 @@ class ExternalCustomAttributable(CustomAttributableBase):
         ftrp_properties.append(val.custom_attribute.title + ".email")
     db.session.query(MysqlRecordProperty)\
         .filter(
-            and_(
+            sa.and_(
                 MysqlRecordProperty.key == self.id,
                 MysqlRecordProperty.type == self.__class__.__name__,
                 MysqlRecordProperty.property.in_(ftrp_properties)))\
@@ -260,7 +258,7 @@ class ExternalCustomAttributable(CustomAttributableBase):
     """
     # pylint: disable=too-many-locals
     from ggrc.models.external_custom_attribute_value \
-        import ExternalCustomAttributeValue
+        import ExternalCustomAttributeValue as ecad
 
     ca_values = src.get("custom_attribute_values")
     if ca_values and "attribute_value" in ca_values[0]:
@@ -284,9 +282,12 @@ class ExternalCustomAttributable(CustomAttributableBase):
     #    [ {<id of attribute definition> : attribute value, ... }, ... ]
 
     # 1) Get all custom attribute values for the CustomAttributable instance
-    attr_values = db.session.query(ExternalCustomAttributeValue).filter(and_(
-        ExternalCustomAttributeValue.attributable_type == self.__class__.__name__,
-        ExternalCustomAttributeValue.attributable_id == self.id)).all()
+    attr_values = db.session.query(ecad).filter(
+        sa.and_(
+            ecad.attributable_type == self.__class__.__name__,
+            ecad.attributable_id == self.id
+        )
+    ).all()
 
     # Save previous value of custom attribute. This is a bit complicated by
     # the fact that imports can save multiple values at the time of writing.
@@ -328,17 +329,18 @@ class ExternalCustomAttributable(CustomAttributableBase):
       # self.custom_attribute_values.append(new_value)
 
   @classmethod
-  def get_custom_attribute_definitions(cls, field_names=None):   # TODO DOuble CHECK
+  def get_custom_attribute_definitions(cls, field_names=None,
+                                       attributable_ids=None):
     """Get all applicable CA definitions (even ones without a value yet)."""
     from ggrc.models.external_custom_attribute_definition import \
         ExternalCustomAttributeDefinition as cad
-
+    del attributable_ids  # Used in CustomAttributable method
     query = cad.query.filter(
         cad.definition_type == utils.underscore_from_camelcase(cls.__name__)
     )
     if field_names:
       query = query.filter(
-          sqlalchemy.or_(cad.title.in_(field_names), cad.mandatory)
+          sa.or_(cad.title.in_(field_names), cad.mandatory)
       )
     return query.options(
         orm.undefer_group('ExternalCustomAttributeDefinition_complete')

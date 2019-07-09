@@ -484,7 +484,7 @@ class CustomAttributable(CustomAttributableBase):
 
     This method returns custom attribute definitions for entire class. Returned
     definitions can be filtered by providing `field_names` or `attributable_id`
-    argumetns. Note, that providing this arguments also improves performance.
+    arguments. Note, that providing this arguments also improves performance.
     Avoid getting all possible attribute definitions if possible.
 
     Args:
