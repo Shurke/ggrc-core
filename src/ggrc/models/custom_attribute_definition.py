@@ -4,23 +4,23 @@
 """Custom attribute definition module"""
 
 import re
+
 import flask
 import sqlalchemy as sa
 from sqlalchemy import func
-from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import validates
 from sqlalchemy.sql.schema import UniqueConstraint
 
-from ggrc import db
-from ggrc.utils import errors
-from ggrc.models.mixins import attributevalidator
 from ggrc import builder
-from ggrc.models import mixins
-from ggrc.models.mixins import base
+from ggrc import db
 from ggrc.access_control import role as acr
-from ggrc.models.exceptions import ValidationError
-from ggrc.models import reflection
 from ggrc.cache import memcache
+from ggrc.models import mixins
+from ggrc.models import reflection
+from ggrc.models.exceptions import ValidationError
+from ggrc.models.mixins import attributevalidator
+from ggrc.models.mixins import base
+from ggrc.utils import errors
 from ggrc.utils import validators
 
 
@@ -412,20 +412,3 @@ def get_local_cads(definition_type, instance_id):
 @memcache.cached
 def get_model_name_inflector_dict():
   return {m: i for i, m in get_inflector_model_name_pairs()}
-
-
-def get_custom_attributes_for(model_name, instance_id=None):
-  """Returns custom attributes jsons for sent model_name and instance_id."""
-  from ggrc import models
-  model = models.get_model(model_name)
-  if not model or not issubclass(model, models.mixins.CustomAttributable):
-    return []
-
-  definition_type = get_model_name_inflector_dict()[model_name]
-  if not definition_type:
-    return []
-  cads = get_global_cads(definition_type)
-  if instance_id is not None and \
-     model_name in models.mixins.CustomAttributable.MODELS_WITH_LOCAL_CADS:
-    cads.extend(get_local_cads(definition_type, instance_id))
-  return cads
