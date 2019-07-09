@@ -4,28 +4,34 @@
 """Module with Person model definition."""
 
 import re
+
 from sqlalchemy.orm import validates
 
 from ggrc import builder
 from ggrc import db
+from ggrc import rbac
 from ggrc import settings
-from ggrc.fulltext.mixin import Indexed
-from ggrc.models.context import HasOwnContext
-from ggrc.models.exceptions import ValidationError
+from ggrc.fulltext import attributes
+from ggrc.fulltext import mixin as ft_mixin
+from ggrc.models import context
+from ggrc.models import exceptions
+from ggrc.models import reflection
+from ggrc.models import relationship
 from ggrc.models.deferred import deferred
 from ggrc.models.mixins import base
-from ggrc.models.mixins import Base, CustomAttributable
-from ggrc.models import reflection
-from ggrc.models.mixins.customattributable import CustomAttributeMapable
-from ggrc.models.relationship import Relatable
-from ggrc.models.utils import validate_option
-from ggrc.rbac import SystemWideRoles
+from ggrc.models.mixins import customattributable
 from ggrc.models.person_profile import PersonProfile
-from ggrc.fulltext import attributes
+from ggrc.models.utils import validate_option
 
 
-class Person(CustomAttributable, CustomAttributeMapable, HasOwnContext,
-             Relatable, base.ContextRBAC, Base, Indexed, db.Model):
+class Person(customattributable.CustomAttributable,
+             customattributable.CustomAttributeMapable,
+             context.HasOwnContext,
+             relationship.Relatable,
+             base.ContextRBAC,
+             base.Base,
+             ft_mixin.Indexed,
+             db.Model):
   """Person model definition."""
 
   def __init__(self, *args, **kwargs):
@@ -162,14 +168,14 @@ class Person(CustomAttributable, CustomAttributeMapable, HasOwnContext,
     """Email property validator."""
     if not Person.is_valid_email(email):
       message = "Email address '{}' is invalid. Valid email must be provided"
-      raise ValidationError(message.format(email))
+      raise exceptions.ValidationError(message.format(email))
     return email
 
   @validates('name')
   def validate_name(self, _, name):
     """Name property validator."""
     if not name:
-      raise ValidationError("Name is empty")
+      raise exceptions.ValidationError("Name is empty")
     return name
 
   @staticmethod
@@ -218,17 +224,17 @@ class Person(CustomAttributable, CustomAttributeMapable, HasOwnContext,
     """
 
     if self.email in getattr(settings, "BOOTSTRAP_ADMIN_USERS", []):
-      return SystemWideRoles.SUPERUSER
+      return rbac.SystemWideRoles.SUPERUSER
 
     from ggrc.utils.user_generator import is_app_2_app_user_email
     if is_app_2_app_user_email(self.email):
-      return SystemWideRoles.SUPERUSER
+      return rbac.SystemWideRoles.SUPERUSER
 
     role_hierarchy = {
-        SystemWideRoles.ADMINISTRATOR: 0,
-        SystemWideRoles.EDITOR: 1,
-        SystemWideRoles.READER: 2,
-        SystemWideRoles.CREATOR: 3,
+        rbac.SystemWideRoles.ADMINISTRATOR: 0,
+        rbac.SystemWideRoles.EDITOR: 1,
+        rbac.SystemWideRoles.READER: 2,
+        rbac.SystemWideRoles.CREATOR: 3,
     }
     unique_roles = set([
         user_role.role.name
