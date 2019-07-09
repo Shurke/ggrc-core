@@ -11,7 +11,7 @@ import sqlalchemy as sa
 from ggrc.models import reflection
 from ggrc.access_control import role as ACR
 from ggrc.access_control import roleable
-from ggrc.models.mixins import customattributable
+from ggrc.models import mixins
 
 Field = collections.namedtuple("Field", ["name", "mandatory"])
 
@@ -80,7 +80,8 @@ class MetaInfo(object):
   @cached_property.cached_property
   def cads(self):
     """Return CADs for sent instance."""
-    if not isinstance(self.instance, customattributable.CustomAttributable):
+    if not isinstance(self.instance, (mixins.CustomAttributable,
+                                      mixins.ExternalCustomAttributable)):
       return set()
     return set(self.instance.custom_attribute_definitions)
 
