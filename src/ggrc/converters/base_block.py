@@ -126,7 +126,8 @@ class BlockConverter(object):
 
   def _create_ca_definitions_cache(self, field_names=None):
     """Create cache for custom attribute definitions used in this block."""
-    if not issubclass(self.object_class, mixins.CustomAttributable):
+    if not issubclass(self.object_class, (mixins.CustomAttributable,
+                                          mixins.ExternalCustomAttributable)):
       self._ca_definitions_cache = {}
       return
 

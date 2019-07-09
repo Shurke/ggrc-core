@@ -48,7 +48,8 @@ def apply_acl(instance, content):
 def apply_cav(instance, content):
   """Apply CAVs."""
   any_cav_applied = False
-  if not isinstance(instance, mixins.customattributable.CustomAttributable):
+  if not isinstance(instance, (mixins.CustomAttributable,
+                               mixins.ExternalCustomAttributable)):
     return any_cav_applied
   cad_dict = {d.id: d for d in instance.custom_attribute_definitions}
   cav_dict = {i.custom_attribute_id: i
@@ -69,12 +70,19 @@ def apply_cav(instance, content):
       cav.attribute_value = value["attribute_value"]
       cav.attribute_object_id = attribute_object_id
     else:
-      cav = all_models.CustomAttributeValue(
-          custom_attribute=cad,
-          attributable=instance,
-          attribute_value=value["attribute_value"],
-          attribute_object_id=attribute_object_id,
-      )
+      if isinstance(instance, mixins.ExternalCustomAttributable):
+        cav = all_models.ExternalCustomAttributeValue(
+            custom_attribute=cad,
+            attributable=instance,
+            attribute_value=value["attribute_value"],
+        )
+      else:
+        cav = all_models.CustomAttributeValue(
+            custom_attribute=cad,
+            attributable=instance,
+            attribute_value=value["attribute_value"],
+            attribute_object_id=attribute_object_id,
+        )
       instance.custom_attribute_values.append(cav)
   return any_cav_applied
 

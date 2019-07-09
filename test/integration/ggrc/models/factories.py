@@ -84,14 +84,22 @@ class WithACLandCAFactory(ModelFactory):
             ac_role_id=acl.get("ac_role_id"),
             person_id=acl.get("person_id"),
         ))
-    if cavs and isinstance(instance, all_models.mixins.CustomAttributable):
-      for cav in cavs:
-        db.session.add(all_models.CustomAttributeValue(
-            attributable=instance,
-            attribute_value=cav.get("attribute_value"),
-            attribute_object_id=cav.get("attribute_object_id"),
-            custom_attribute_id=cav.get("custom_attribute_id"),
-        ))
+    if cavs:
+      if isinstance(instance, all_models.mixins.CustomAttributable):
+        for cav in cavs:
+          db.session.add(all_models.CustomAttributeValue(
+              attributable=instance,
+              attribute_value=cav.get("attribute_value"),
+              attribute_object_id=cav.get("attribute_object_id"),
+              custom_attribute_id=cav.get("custom_attribute_id"),
+          ))
+      elif isinstance(instance, all_models.mixins.ExternalCustomAttributable):
+        for cav in cavs:
+          db.session.add(all_models.ExternalCustomAttributeValue(
+              attributable=instance,
+              attribute_value=cav.get("attribute_value"),
+              custom_attribute_id=cav.get("custom_attribute_id"),
+          ))
 
     if isinstance(instance, all_models.CustomAttributeValue):
       cls._log_event(instance.attributable)

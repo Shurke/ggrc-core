@@ -421,7 +421,8 @@ class AttributeInfo(object):
     from ggrc.models import mixins
 
     definitions = {}
-    if not issubclass(object_class, mixins.CustomAttributable):
+    if not issubclass(object_class, (mixins.CustomAttributable,
+                                     mixins.ExternalCustomAttributable)):
       return definitions
 
     object_name = underscore_from_camelcase(object_class.__name__)
