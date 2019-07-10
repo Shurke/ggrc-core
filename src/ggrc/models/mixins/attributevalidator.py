@@ -70,15 +70,15 @@ class AttributeValidator(object):
     model = ggrc.models.get_model(definition_type)
     if issubclass(model, ggrc.models.mixins.ExternalCustomAttributable):
       cad = ggrc.models.all_models.ExternalCustomAttributeDefinition
+      filter = []
     else:
       cad = ggrc.models.all_models.CustomAttributeDefinition
+      filter = [cad.definition_id.is_(None)]
     definition_types = [definition_type]
     if definition_type == "assessment_template":
       definition_types.append("assessment")
+    filter.append(cad.definition_type.in_(definition_types))
     if not getattr(flask.g, "global_cad_names", set()):
-      query = db.session.query(cad.title, cad.id).filter(
-          cad.definition_type.in_(definition_types),
-          cad.definition_id.is_(None)
-      )
+      query = db.session.query(cad.title, cad.id).filter(*filter)
       flask.g.global_cad_names = {name.lower(): id_ for name, id_ in query}
     return flask.g.global_cad_names

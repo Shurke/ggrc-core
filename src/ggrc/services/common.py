@@ -83,9 +83,11 @@ def set_ids_for_new_custom_attributes(parent_obj):
   if not hasattr(parent_obj, "PER_OBJECT_CUSTOM_ATTRIBUTABLE"):
     return
   for obj in get_modified_objects(db.session).new:
-    if obj.type == "CustomAttributeValue":
+    if obj.type in ("CustomAttributeValue",
+                    "ExternalCustomAttributeValue"):
       obj.attributable = parent_obj
-    elif obj.type == "CustomAttributeDefinition":
+    elif obj.type in ("CustomAttributeDefinition",
+                      "ExternalCustomAttributeDefinition"):
       obj.definition = parent_obj
 
 

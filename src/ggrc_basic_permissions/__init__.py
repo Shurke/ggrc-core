@@ -190,6 +190,15 @@ def load_default_permissions(permissions):
               },
               "condition": "contains"
           },
+          "ExternalCustomAttributeDefinition",
+          {
+              "type": "ExternalCustomAttributeValue",
+              "terms": {
+                  "list_property": "owners",
+                  "value": "$current_user"
+              },
+              "condition": "contains"
+          },
           {
               "type": "NotificationConfig",
               "terms": {

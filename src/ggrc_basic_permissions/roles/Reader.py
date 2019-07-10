@@ -28,6 +28,8 @@ permissions = {
         "AssessmentTemplate",
         "CustomAttributeDefinition",
         "CustomAttributeValue",
+        "ExternalCustomAttributeDefinition",
+        "ExternalCustomAttributeValue",
         "Issue",
         "DataAsset",
         "AccessGroup",
