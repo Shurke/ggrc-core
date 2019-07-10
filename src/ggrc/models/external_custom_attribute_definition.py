@@ -139,8 +139,8 @@ class ExternalCustomAttributeDefinition(CustomAttributeDefinitionBase):
           errors.DUPLICATE_RESERVED_NAME.format(attr_name=orig_name)
       )
 
-    if (self._get_global_ecad_names(definition_type).get(name) is not None and
-            self._get_global_ecad_names(definition_type).get(name) != self.id):
+    if (self._get_global_cad_names(definition_type).get(name) is not None and
+            self._get_global_cad_names(definition_type).get(name) != self.id):
       raise ValueError(errors.DUPLICATE_GCAD_NAME.format(attr_name=orig_name))
 
     self.assert_acr_exist(orig_name, definition_type)
