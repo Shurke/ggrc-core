@@ -330,32 +330,18 @@ class CustomAttributeDefinition(CustomAttributeDefinitionBase):
           errors.DUPLICATE_CUSTOM_ROLE.format(role_name=name)
       )
 
-  def log_json(self):
-    """Add extra fields to be logged in CADs."""
-    results = super(CustomAttributeDefinition, self).log_json()
-    results["default_value"] = self.default_value
-    return results
 
+def init_cad_listeners():
+  from ggrc.models.external_custom_attribute_definition \
+      import ExternalCustomAttributeDefinition
 
-sa.event.listen(
-    CustomAttributeDefinition,
-    "before_insert",
-    validators.validate_definition_type_ggrcq
-)
-
-
-sa.event.listen(
-    CustomAttributeDefinition,
-    "before_update",
-    validators.validate_definition_type_ggrcq
-)
-
-
-sa.event.listen(
-    CustomAttributeDefinition,
-    "before_delete",
-    validators.validate_definition_type_ggrcq
-)
+  for action in ("before_insert", "before_update", "before_delete"):
+    sa.event.listen(CustomAttributeDefinition,
+                    action,
+                    validators.validate_definition_type_cad)
+    sa.event.listen(ExternalCustomAttributeDefinition,
+                    action,
+                    validators.validate_definition_type_ecad)
 
 
 @memcache.cached

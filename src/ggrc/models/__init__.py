@@ -8,6 +8,7 @@ from ggrc.models import inflector
 from ggrc.models import reflection
 from ggrc.models import all_models
 from ggrc.models.all_models import *  # noqa
+from ggrc.models.custom_attribute_definition import init_cad_listeners
 from ggrc.utils import html_cleaner
 from ggrc.utils import benchmark
 
@@ -104,5 +105,6 @@ def init_app(app):
   init_lazy_mixins()
   init_session_monitor_cache()
   init_sanitization_hooks()
+  init_cad_listeners()
 
 from ggrc.models.inflector import get_model  # noqa
