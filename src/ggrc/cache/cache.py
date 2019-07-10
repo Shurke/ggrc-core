@@ -23,7 +23,6 @@ def all_cache_entries():
       resource('access_groups', 'AccessGroup'),
       resource('account_balances', 'AccountBalance'),
       resource('audits', 'Audit'),
-      resource('custom_attribute_values', 'CustomAttributeValue'),
       resource('comments', 'Comment'),
       resource('external_comments', 'ExternalComment'),
       resource('contexts', 'Context'),
