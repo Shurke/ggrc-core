@@ -25,7 +25,7 @@ logger = getLogger(__name__)
 
 
 class CustomAttributableBase(object):
-  """CustomAttributable and ExternalCustomAttributable mase class"""
+  """CustomAttributable and ExternalCustomAttributable base class"""
   _api_attrs = reflection.ApiAttributes(
       'custom_attribute_values',
       reflection.Attribute('custom_attribute_definitions',

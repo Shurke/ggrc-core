@@ -103,20 +103,6 @@ class CustomAttributeValueBase(base.ContextRBAC,
         order_by=Revision.created_at.desc(),
     )
 
-  def _clone(self, obj):
-    """Clone a custom value to a new object."""
-    data = {
-        "custom_attribute_id": self.custom_attribute_id,
-        "attributable_id": obj.id,
-        "attributable_type": self.attributable_type,
-        "attribute_value": self.attribute_value,
-        "attribute_object_id": self.attribute_object_id
-    }
-    ca_value = self.__class__(**data)
-    db.session.add(ca_value)
-    db.session.flush()
-    return ca_value
-
   def _validate_dropdown(self):
     """Validate dropdown option."""
     valid_options = set(self.custom_attribute.multi_choice_options.split(","))
@@ -392,6 +378,20 @@ class CustomAttributeValue(CustomAttributeValueBase):
     if not object_existence:
       raise ValueError('Invalid attribute value: %s' %
                        self.custom_attribute.title)
+
+  def _clone(self, obj):
+    """Clone a custom value to a new object."""
+    data = {
+        "custom_attribute_id": self.custom_attribute_id,
+        "attributable_id": obj.id,
+        "attributable_type": self.attributable_type,
+        "attribute_value": self.attribute_value,
+        "attribute_object_id": self.attribute_object_id
+    }
+    ca_value = self.__class__(**data)
+    db.session.add(ca_value)
+    db.session.flush()
+    return ca_value
 
   @builder.simple_property
   def is_empty(self):
