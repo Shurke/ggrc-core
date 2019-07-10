@@ -23,7 +23,7 @@ from ggrc.models.relationship import Relatable
 
 class Risk(synchronizable.Synchronizable,
            synchronizable.RoleableSynchronizable,
-           mixins.CustomAttributable,
+           mixins.ExternalCustomAttributable,
            Relatable,
            PublicDocumentable,
            comment.ExternalCommentable,
