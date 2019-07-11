@@ -9,6 +9,7 @@ import flask
 import sqlalchemy as sa
 from sqlalchemy.orm import validates
 from sqlalchemy.sql.schema import UniqueConstraint
+from werkzeug import exceptions
 
 from ggrc import builder
 from ggrc import db
@@ -338,9 +339,19 @@ def init_cad_listeners():
     sa.event.listen(CustomAttributeDefinition,
                     action,
                     validators.validate_definition_type_cad)
+  for action in ("before_insert", "before_update"):
     sa.event.listen(ExternalCustomAttributeDefinition,
                     action,
                     validators.validate_definition_type_ecad)
+  sa.event.listen(ExternalCustomAttributeDefinition,
+                  "before_delete",
+                  raise_method_is_not_allowed)
+
+
+def raise_method_is_not_allowed(*args, **kwargs):
+  """Raise MethodNotAllowed exception for use with sa.event.listen"""
+  del args, kwargs
+  raise exceptions.MethodNotAllowed()
 
 
 @memcache.cached
