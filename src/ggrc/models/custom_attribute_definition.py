@@ -68,7 +68,7 @@ class CustomAttributeDefinitionBase(attributevalidator.AttributeValidator,
   definition_type = db.Column(db.String, nullable=False)
   attribute_type = db.Column(db.String, nullable=False)
   multi_choice_options = db.Column(db.String)
-  mandatory = db.Column(db.Boolean)
+  mandatory = db.Column(db.Boolean, nullable=False, default=False)
   helptext = db.Column(db.String)
   placeholder = db.Column(db.String)
 

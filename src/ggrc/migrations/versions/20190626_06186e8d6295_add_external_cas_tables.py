@@ -27,7 +27,7 @@ def upgrade():
     sa.Column('definition_type', sa.String(length=250), nullable=False),
     sa.Column('attribute_type', sa.String(length=250), nullable=False),
     sa.Column('multi_choice_options', sa.String(length=250), nullable=True),
-    sa.Column('mandatory', sa.Boolean(), nullable=True),
+    sa.Column('mandatory', sa.Boolean(), nullable=False),
     sa.Column('helptext', sa.String(length=250), nullable=True),
     sa.Column('placeholder', sa.String(length=250), nullable=True),
     sa.Column('context_id', sa.Integer(), nullable=True),
@@ -44,8 +44,12 @@ def upgrade():
                     ['title'],
                     unique=False)
 
+    op.alter_column('custom_attribute_definitions', 'mandatory',
+               existing_type=mysql.TINYINT(display_width=1),
+               nullable=False)
+
     op.create_table('external_custom_attribute_values',
-    sa.Column('id', sa.Integer(), autoincrement=False, nullable=False),
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('external_id', sa.Integer(), nullable=True),
     sa.Column('custom_attribute_id', sa.Integer(), nullable=False),
     sa.Column('attributable_type', sa.String(length=250), nullable=True),

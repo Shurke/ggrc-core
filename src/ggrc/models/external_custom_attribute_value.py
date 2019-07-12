@@ -14,7 +14,6 @@ class ExternalCustomAttributeValue(CustomAttributeValueBase):
 
   __tablename__ = 'external_custom_attribute_values'
 
-  id = db.Column(db.Integer, primary_key=True, autoincrement=False)
   external_id = db.Column(db.Integer, nullable=True, unique=True)
   custom_attribute_id = db.Column(
       db.Integer,
