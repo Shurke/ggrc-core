@@ -392,41 +392,41 @@ class TestCreateRevisionAfterDeleteCAD(TestCase):
     must be False
     """
     with factories.single_commit():
-      control = factories.ControlFactory()
+      objective = factories.ObjectiveFactory()
       program = factories.ProgramFactory()
       factories.RelationshipFactory(
           source=program,
-          destination=control,
+          destination=objective,
       )
 
       audit = factories.AuditFactory()
 
       factories.RelationshipFactory(
           source=audit,
-          destination=control
+          destination=objective
       )
       cad = factories.CustomAttributeDefinitionFactory(
           title="test_name",
-          definition_type="control",
+          definition_type="objective",
           attribute_type="Text",
       )
 
       if is_add_cav:
         factories.CustomAttributeValueFactory(
             custom_attribute=cad,
-            attributable=control,
+            attributable=objective,
             attribute_value="test",
         )
 
       last_revision = models.Revision.query.filter(
-          models.Revision.resource_id == control.id,
-          models.Revision.resource_type == control.type,
+          models.Revision.resource_id == objective.id,
+          models.Revision.resource_type == objective.type,
       ).order_by(models.Revision.id.desc()).first()
 
       snapshot = factories.SnapshotFactory(
           parent=audit,
-          child_id=control.id,
-          child_type=control.type,
+          child_id=objective.id,
+          child_type=objective.type,
           revision=last_revision,
       )
 

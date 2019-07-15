@@ -342,13 +342,17 @@ class TestSnapshoting(SnapshotterBaseTestCase):
     control = self.create_object(models.Control, {
         "title": "Test Control Snapshot 1"
     })
-    custom_attribute_defs = self.create_custom_attribute_definitions()
+    custom_attribute_def = factories.ExternalCustomAttributeDefinitionFactory(
+        definition_type="control",
+        title="control text field 1",
+        attribute_type="Text",
+    )
     cav = {
-        "custom_attribute": custom_attribute_defs["control"],
+        "custom_attribute": custom_attribute_def,
         "attributable": control,
         "attribute_value": "CA value 1",
     }
-    factories.CustomAttributeValueFactory(**cav)
+    factories.ExternalCustomAttributeValueFactory(**cav)
     self.create_mapping(program, control)
     control = self.refresh_object(control)
     self.create_audit(program)
@@ -360,11 +364,12 @@ class TestSnapshoting(SnapshotterBaseTestCase):
             models.Snapshot.parent_id == audit.id
         ).count(), 1)
     control = self.refresh_object(control)
-    cad2 = models.CustomAttributeDefinition.query.filter(
-        models.CustomAttributeDefinition.title == "control text field 1"
+    cad2 = models.ExternalCustomAttributeDefinition.query.filter(
+        models.ExternalCustomAttributeDefinition.title ==
+        "control text field 1"
     ).one()
-    val2 = models.CustomAttributeValue(attribute_value="CA value 1",
-                                       custom_attribute=cad2)
+    val2 = models.ExternalCustomAttributeValue(attribute_value="CA value 1",
+                                               custom_attribute=cad2)
 
     with self.api.as_external():
       self.api.put(control, {

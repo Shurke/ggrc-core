@@ -25,6 +25,7 @@ from ggrc.models import reflection
 logger = getLogger(__name__)
 
 
+# pylint: disable=attribute-defined-outside-init; CustomAttributable is a mixin
 class CustomAttributableBase(object):
   """CustomAttributable and ExternalCustomAttributable base class"""
   _api_attrs = reflection.ApiAttributes(

@@ -362,19 +362,18 @@ def refresh_program_cads_title(cad):
 @helpers.without_sqlalchemy_cache
 def update_cad_related_objects(task):
   """Update CAD related objects"""
-  event_id = task.parameters.get("event_id")
-  model_name = task.parameters.get("model_name")
-  need_revisions = task.parameters.get("need_revisions")
-  modified_by_id = task.parameters.get("modified_by_id")
-
-  event = models.all_models.Event.query.filter_by(id=event_id).first()
-  model = models.get_model(model_name)
+  event = models.all_models.Event.query.filter_by(
+      id=task.parameters.get("event_id")
+  ).first()
+  model = models.get_model(task.parameters.get("model_name"))
   if issubclass(model, models.mixins.ExternalCustomAttributable):
     cad_model = models.all_models.ExternalCustomAttributeDefinition
   else:
     cad_model = models.all_models.CustomAttributeDefinition
   cad = cad_model.query.filter_by(id=event.resource_id).first()
-  query = db.session.query(model if need_revisions else model.id)
+  query = db.session.query(model
+                           if task.parameters.get("need_revisions")
+                           else model.id)
   if event.action == "PUT":
     refresh_program_cads_title(cad)
   objects_count = len(query.all())
@@ -385,10 +384,10 @@ def update_cad_related_objects(task):
     logger.info(
         "Updating CAD related objects: %s/%s", handled_objects, objects_count
     )
-    if need_revisions:
+    if task.parameters.get("need_revisions"):
       for obj in chunk_objects:
         obj.updated_at = datetime.datetime.utcnow()
-        obj.modified_by_id = modified_by_id
+        obj.modified_by_id = task.parameters.get("modified_by_id")
     else:
       model.bulk_record_update_for([obj_id for obj_id, in chunk_objects])
     log_event.log_event(db.session, cad, event=event)

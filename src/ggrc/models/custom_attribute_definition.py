@@ -338,6 +338,7 @@ class CustomAttributeDefinition(CustomAttributeDefinitionBase):
 
 
 def init_cad_listeners():
+  """Register event listeners for CAD and eCAD models"""
   from ggrc.models.external_custom_attribute_definition \
       import ExternalCustomAttributeDefinition
 

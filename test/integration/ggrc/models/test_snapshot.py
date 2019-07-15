@@ -108,14 +108,25 @@ class TestSnapshotQueryApi(TestCase):
   def _create_cas(self):
     """Create custom attribute definitions."""
     self._ca_objects = {}
+    external_ca_model_names = [
+        "control",
+    ]
     ca_model_names = [
         "facility",
-        "control",
         "market",
         "requirement",
         "threat",
         "access_group",
         "data_asset"
+    ]
+    external_ca_args = [
+        {"title": "CA text", "attribute_type": "Text"},
+        {"title": "CA rich text", "attribute_type": "Rich Text"},
+        {"title": "CA date", "attribute_type": "Date"},
+        {"title": "CA multiselect", "attribute_type": "Multiselect",
+         "multi_choice_options": "yes,no"},
+        {"title": "CA dropdown", "attribute_type": "Dropdown",
+         "multi_choice_options": "one,two,three,four,five"},
     ]
     ca_args = [
         {"title": "CA text", "attribute_type": "Text"},
@@ -131,6 +142,13 @@ class TestSnapshotQueryApi(TestCase):
       with app.app_context():
         for args in ca_args:
           factories.CustomAttributeDefinitionFactory(
+              definition_type=type_,
+              **args
+          )
+    for type_ in external_ca_model_names:
+      with app.app_context():
+        for args in external_ca_args:
+          factories.ExternalCustomAttributeDefinitionFactory(
               definition_type=type_,
               **args
           )
@@ -151,7 +169,6 @@ class TestSnapshotQueryApi(TestCase):
               "CA text",
               "CA rich text",
               "CA date",
-              "CA checkbox",
               "CA multiselect",
               "CA dropdown"
           ])
@@ -160,14 +177,13 @@ class TestSnapshotQueryApi(TestCase):
           "CA text": "Control ca text",
           "CA rich text": "control<br><br>\nrich text",
           "CA date": "22/02/2022",
-          "CA checkbox": "yes",
           "CA multiselect": "yes",
           "CA dropdown": "one"
       }
 
       for title, value in ca_values.items():
         for obj in objects:
-          factories.CustomAttributeValueFactory(
+          factories.ExternalCustomAttributeValueFactory(
               custom_attribute=ca_definitions[title],
               attributable=obj,
               attribute_value=value

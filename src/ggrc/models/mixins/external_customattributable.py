@@ -30,20 +30,20 @@ class ExternalCustomAttributable(CustomAttributableBase):
   def custom_attribute_definitions(cls):  # pylint: disable=no-self-argument
     """Load custom attribute definitions"""
     from ggrc.models.external_custom_attribute_definition\
-        import ExternalCustomAttributeDefinition
+        import ExternalCustomAttributeDefinition as ecad
 
     def join_function():
       """Object and CAD join function."""
-      definition_type = foreign(ExternalCustomAttributeDefinition.definition_type)
+      definition_type = foreign(ecad.definition_type)
+      # TODO Find better join condition that works
       return sa.and_(definition_type == cls._inflector.table_singular,
-                  sa.or_(cls.id != ExternalCustomAttributeDefinition.id,  #TODO FIND SOLUTION!!!!!!!
-                      cls.id == ExternalCustomAttributeDefinition.id))
+                     sa.or_(cls.id != ecad.id, cls.id == ecad.id))
 
     return relationship(
         "ExternalCustomAttributeDefinition",
         primaryjoin=join_function,
         backref='{0}_custom_attributable_definition'.format(cls.__name__),
-        order_by=ExternalCustomAttributeDefinition.id.asc(),
+        order_by=ecad.id.asc(),
         viewonly=True,
     )
 
@@ -53,16 +53,20 @@ class ExternalCustomAttributable(CustomAttributableBase):
     from ggrc.models.external_custom_attribute_value \
         import ExternalCustomAttributeValue as ecav
 
-    joinstr = lambda: sa.and_(
-        foreign(remote(ecav.attributable_id)) == cls.id,
-        ecav.attributable_type == cls.__name__
-    )
+    def joinstr():
+      """Primary join function"""
+      return sa.and_(
+          foreign(remote(ecav.attributable_id)) == cls.id,
+          ecav.attributable_type == cls.__name__
+      )
 
     # Since we have some kind of generic relationship here, it is needed
     # to provide custom joinstr for backref. If default, all models having
     # this mixin will be queried, which in turn produce large number of
     # queries returning nothing and one query returning object.
-    backref_joinstr = lambda: remote(cls.id) == foreign(ecav.attributable_id)
+    def backref_joinstr():
+      """Backref join function"""
+      return remote(cls.id) == foreign(ecav.attributable_id)
 
     return db.relationship(
         "ExternalCustomAttributeValue",
@@ -110,7 +114,8 @@ class ExternalCustomAttributable(CustomAttributableBase):
       values: List of dictionaries that represent custom attribute values.
     """
     from ggrc.utils import referenced_objects
-    from ggrc.models.external_custom_attribute_value import ExternalCustomAttributeValue
+    from ggrc.models.external_custom_attribute_value \
+        import ExternalCustomAttributeValue
 
     for value in values:
       # TODO: decompose to smaller methods
@@ -373,12 +378,13 @@ class ExternalCustomAttributable(CustomAttributableBase):
 
     if self.custom_attribute_values:
       res["custom_attribute_values"] = [
-          value.log_json() for value in self.custom_attribute_values]
+          value.log_json() for value in self.custom_attribute_values
+      ]
       # fetch definitions form database because `self.custom_attribute`
       # may not be populated
       defs = ExternalCustomAttributeDefinition.query.filter(
           ExternalCustomAttributeDefinition.definition_type ==
-              self._inflector.table_singular,
+          self._inflector.table_singular,
           ExternalCustomAttributeDefinition.id.in_([
               value.custom_attribute_id
               for value in self.custom_attribute_values

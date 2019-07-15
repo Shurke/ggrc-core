@@ -146,33 +146,33 @@ class TestRevisions(query_helper.WithQueryApi, TestCase):
     which had this CAD.
     """
     with factories.single_commit():
-      control = factories.ControlFactory()
+      objective = factories.ObjectiveFactory()
 
       cad = factories.CustomAttributeDefinitionFactory(
           title="test_name",
-          definition_type="control",
+          definition_type="objective",
       )
       cad_id = cad.id
       if is_add_cav:
         factories.CustomAttributeValueFactory(
             custom_attribute=cad,
-            attributable=control,
+            attributable=objective,
             attribute_value="text",
         )
 
       revision_id = ggrc.models.Revision.query.filter(
-          ggrc.models.Revision.resource_id == control.id,
-          ggrc.models.Revision.resource_type == control.type,
+          ggrc.models.Revision.resource_id == objective.id,
+          ggrc.models.Revision.resource_type == objective.type,
       ).order_by(ggrc.models.Revision.id.desc()).first().id
 
     with self.api_helper.as_external():
       self.api_helper.delete(cad, cad_id)
 
-    control = ggrc.models.Control.query.first()
+    objective = ggrc.models.Objective.query.first()
 
     last_revision_id = ggrc.models.Revision.query.filter(
-        ggrc.models.Revision.resource_id == control.id,
-        ggrc.models.Revision.resource_type == control.type,
+        ggrc.models.Revision.resource_id == objective.id,
+        ggrc.models.Revision.resource_type == objective.type,
     ).order_by(ggrc.models.Revision.id.desc()).first().id
 
     self.assertGreater(last_revision_id, revision_id)
@@ -181,21 +181,21 @@ class TestRevisions(query_helper.WithQueryApi, TestCase):
   def test_change_modified_by(self, is_add_cav):
     """Test checked correct changing of modified_by_id field.
 
-    User 1 create control, user 2 delete CAD. After the deleting CAD
+    User 1 create objective, user 2 delete CAD. After the deleting CAD
     test checking that modified_by field contains user 2.
     """
     with factories.single_commit():
-      control = factories.ControlFactory()
+      objective = factories.ObjectiveFactory()
       cad = factories.CustomAttributeDefinitionFactory(
           title="test_cad",
-          definition_type="control",
+          definition_type="objective",
           attribute_type="Text",
       )
-      control_id = control.id
+      control_id = objective.id
       if is_add_cav:
         factories.CustomAttributeValueFactory(
             custom_attribute=cad,
-            attributable=control,
+            attributable=objective,
             attribute_value="test")
 
     user = self.gen.generate_person(
@@ -204,11 +204,11 @@ class TestRevisions(query_helper.WithQueryApi, TestCase):
     self.api_helper.set_user(user)
     self.client.get("/login")
 
-    control_revisions = ggrc.models.Revision.query.filter(
+    objective_revisions = ggrc.models.Revision.query.filter(
         ggrc.models.Revision.resource_id == control_id,
-        ggrc.models.Revision.resource_type == "Control",
+        ggrc.models.Revision.resource_type == "Objective",
     ).order_by(ggrc.models.Revision.id.desc()).all()
-    ids_before_del = set(revision.id for revision in control_revisions)
+    ids_before_del = set(revision.id for revision in objective_revisions)
 
     cad = ggrc.models.CustomAttributeDefinition.query.filter_by(
         title="test_cad").first()
@@ -218,18 +218,18 @@ class TestRevisions(query_helper.WithQueryApi, TestCase):
         title="test_cad").first()
     self.assertIsNone(cad)
 
-    control_revisions_after = ggrc.models.Revision.query.filter(
+    objective_revisions_after = ggrc.models.Revision.query.filter(
         ggrc.models.Revision.resource_id == control_id,
-        ggrc.models.Revision.resource_type == "Control",
+        ggrc.models.Revision.resource_type == "Objective",
     ).order_by(ggrc.models.Revision.id.desc()).all()
     ids_after_del = set(revision.id for revision
-                        in control_revisions_after)
+                        in objective_revisions_after)
 
     difference_revision_id = ids_after_del.difference(ids_before_del)
 
     last_revision = ggrc.models.Revision.query.filter(
         ggrc.models.Revision.resource_id == control_id,
-        ggrc.models.Revision.resource_type == "Control",
+        ggrc.models.Revision.resource_type == "Objective",
     ).order_by(ggrc.models.Revision.id.desc()).first()
 
     self.assertSetEqual(difference_revision_id, {last_revision.id})

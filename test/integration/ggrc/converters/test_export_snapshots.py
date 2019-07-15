@@ -76,6 +76,22 @@ class TestExportSnapshots(TestCase):
               multi_choice_options="one,two,three,four,five"),
       ]
 
+  @staticmethod
+  def _create_ecads(type_):
+    """Create all types of external custom attribute definitions for tests."""
+    with factories.single_commit():
+      cad = factories.ExternalCustomAttributeDefinitionFactory
+      return [
+          cad(title="date", definition_type=type_, attribute_type="Date"),
+          cad(title="multiselect", definition_type=type_,
+              attribute_type="Multiselect", multi_choice_options="yes,no"),
+          cad(title="RT", definition_type=type_, attribute_type="Rich Text"),
+          cad(title="dropdown",
+              definition_type=type_,
+              attribute_type="Dropdown",
+              multi_choice_options="one,two,three,four,five"),
+      ]
+
   @unittest.skip("Skip until import for controls will be deprecated")
   def test_full_control_export(self):
     """Test exporting of a single full control snapshot."""
@@ -200,11 +216,11 @@ class TestExportSnapshots(TestCase):
 
   def test_empty_control_export(self):
     """Test exporting of a single full control snapshot."""
-    cads = self._create_cads("control")
+    cads = self._create_ecads("control")
     with factories.single_commit():
       controls = [factories.ControlFactory(slug="Control 1")]
       for cad in cads:
-        factories.CustomAttributeValueFactory(
+        factories.ExternalCustomAttributeValueFactory(
             attributable=controls[0],
             custom_attribute=cad,
         )
@@ -239,7 +255,6 @@ class TestExportSnapshots(TestCase):
             # Custom attributes
             "RT": u"",
             "Reference URL": u"",
-            "checkbox": u"no",
             "date": u"",
             "dropdown": u"",
             "multiselect": u"",

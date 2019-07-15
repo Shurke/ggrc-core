@@ -433,25 +433,25 @@ class TestSnapshotIndexing(SnapshotterBaseTestCase):
     with factories.single_commit():
       cad = factories.CustomAttributeDefinitionFactory(
           attribute_type=checkbox_type,
-          definition_type="control",
+          definition_type="objective",
           title=cad_title,
       )
-      control = factories.ControlFactory()
+      objective = factories.ObjectiveFactory()
       factories.CustomAttributeValueFactory(
           custom_attribute=cad,
-          attributable=control,
+          attributable=objective,
           attribute_value=value,
       )
     revision = all_models.Revision.query.filter(
-        all_models.Revision.resource_id == control.id,
-        all_models.Revision.resource_type == control.type,
+        all_models.Revision.resource_id == objective.id,
+        all_models.Revision.resource_type == objective.type,
     ).first()
-    revision.content = control.log_json()
+    revision.content = objective.log_json()
     db.session.add(revision)
     with factories.single_commit():
       snapshot = factories.SnapshotFactory(
-          child_id=control.id,
-          child_type=control.type,
+          child_id=objective.id,
+          child_type=objective.type,
           revision=revision)
     db.session.expire_all()
     snapshot_id = snapshot.id
@@ -467,20 +467,20 @@ class TestSnapshotIndexing(SnapshotterBaseTestCase):
     with factories.single_commit():
       factories.CustomAttributeDefinitionFactory(
           attribute_type=checkbox_type,
-          definition_type="control",
+          definition_type="objective",
           title=cad_title,
       )
-      control = factories.ControlFactory()
+      objective = factories.ObjectiveFactory()
     revision = all_models.Revision.query.filter(
-        all_models.Revision.resource_id == control.id,
-        all_models.Revision.resource_type == control.type,
+        all_models.Revision.resource_id == objective.id,
+        all_models.Revision.resource_type == objective.type,
     ).first()
-    revision.content = control.log_json()
+    revision.content = objective.log_json()
     db.session.add(revision)
     with factories.single_commit():
       snapshot = factories.SnapshotFactory(
-          child_id=control.id,
-          child_type=control.type,
+          child_id=objective.id,
+          child_type=objective.type,
           revision=revision)
     db.session.expire_all()
     snapshot_id = snapshot.id

@@ -370,11 +370,9 @@ class TestCheckPopulatedContent(unittest.TestCase):
     content = {"access_control_list": acl_entries}
 
     role_dict = mock.MagicMock()
-    with mock.patch("ggrc.models.custom_attribute_definition.get_cads_counts",
-                    return_value={}):
-      with mock.patch("ggrc.access_control.role.get_custom_roles_for",
-                      return_value=role_dict):
-        revision = all_models.Revision(obj, mock.Mock(), mock.Mock(), content)
+    with mock.patch("ggrc.access_control.role.get_custom_roles_for",
+                    return_value=role_dict):
+      revision = all_models.Revision(obj, mock.Mock(), mock.Mock(), content)
 
-        for acl in revision.content["access_control_list"]:
-          self.assertIsNone(acl.get("parent_id"))
+      for acl in revision.content["access_control_list"]:
+        self.assertIsNone(acl.get("parent_id"))

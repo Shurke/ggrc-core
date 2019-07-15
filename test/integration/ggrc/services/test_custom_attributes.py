@@ -100,7 +100,7 @@ class TestGlobalCustomAttributes(ProductTestCase):
                      "my custom attribute value")
 
   @ddt.data(
-      ("control", "Control title")
+      ("objective", "Objective title")
   )
   @ddt.unpack
   def test_create_from_ggrcq(self, definition_type, title):
@@ -298,13 +298,13 @@ class TestGlobalCustomAttributes(ProductTestCase):
   def test_cad_title_strip_unique(self):
     """Test CAD title stripped should be unique."""
     factories.CustomAttributeDefinitionFactory(
-        definition_type="control",
+        definition_type="objective",
         attribute_type=all_models.CustomAttributeDefinition.ValidTypes.TEXT,
         title="abc",
     )
     with self.assertRaises(ValueError):
       factories.CustomAttributeDefinitionFactory(
-          definition_type="control",
+          definition_type="objective",
           attribute_type=all_models.CustomAttributeDefinition.ValidTypes.TEXT,
           title=" abc ",
       )
@@ -320,21 +320,22 @@ class TestGlobalCustomAttributes(ProductTestCase):
   def test_get_cad_default(self, cad_type, default_value):
     """Check default_value for cad via object and direct cad api."""
     with factories.single_commit():
-      control = factories.ControlFactory()
+      objective = factories.ObjectiveFactory()
       cad = factories.CustomAttributeDefinitionFactory(
-          definition_type="control",
+          definition_type="objective",
           attribute_type=cad_type,
       )
     cad_id = cad.id
-    control_id = control.id
-    control_resp = self.generator.api.get(control, control_id)
+    objective_id = objective.id
+    objective_resp = self.generator.api.get(objective, objective_id)
     cad_resp = self.generator.api.get(cad, cad_id)
     self.assert200(cad_resp)
-    self.assert200(control_resp)
-    self.assertIn("custom_attribute_definitions", control_resp.json["control"])
-    self.assertEqual(
-        1, len(control_resp.json["control"]["custom_attribute_definitions"]))
-    cad_json = control_resp.json["control"]["custom_attribute_definitions"][0]
+    self.assert200(objective_resp)
+    self.assertIn("custom_attribute_definitions",
+                  objective_resp.json["objective"])
+    _cads = objective_resp.json["objective"]["custom_attribute_definitions"]
+    self.assertEqual(1, len(_cads))
+    cad_json = _cads[0]
     self.assertEqual(cad_id, cad_json["id"])
     self.assertIn("default_value", cad_json)
     self.assertEqual(default_value, cad_json["default_value"])

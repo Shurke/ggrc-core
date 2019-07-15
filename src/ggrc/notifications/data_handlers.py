@@ -617,9 +617,9 @@ def custom_attributes_cache(notifications):
   for attr in definitions:
     ca_cache[attr.definition_type].append(attr)
   ext_definitions = models.ExternalCustomAttributeDefinition.query.filter(
-          models.ExternalCustomAttributeDefinition.definition_type.in_(
-              set(notification.object_type for notification in notifications)
-          )
+      models.ExternalCustomAttributeDefinition.definition_type.in_(
+          set(notification.object_type for notification in notifications)
+      )
   )
   for attr in ext_definitions:
     ca_cache[attr.definition_type].append(attr)

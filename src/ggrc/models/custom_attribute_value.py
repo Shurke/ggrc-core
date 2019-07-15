@@ -94,7 +94,7 @@ class CustomAttributeValueBase(base.ContextRBAC,
       resource_id = foreign(Revision.resource_id)
       resource_type = foreign(Revision.resource_type)
       return and_(resource_id == cls.id,
-                  resource_type == cls.type)
+                  resource_type == cls.__name__)
 
     return db.relationship(
         Revision,
@@ -186,6 +186,7 @@ class CustomAttributeValue(CustomAttributeValueBase):
                            update=False),
   )
 
+  # pylint: disable=protected-access
   _validator_map = {
       "Text": lambda self: self._validate_text(),
       "Rich Text": lambda self: self._validate_rich_text(),

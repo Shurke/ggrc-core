@@ -23,31 +23,31 @@ class TestExportRisk(query_helper.WithQueryApi, TestCase):
   def build_full_risk_payload():
     """Build risk payload with full attributes and GCA's"""
     with factories.single_commit():
-      cad_text_id = factories.CustomAttributeDefinitionFactory(
+      cad_text_id = factories.ExternalCustomAttributeDefinitionFactory(
           title="text_GCA",
           definition_type="risk",
           attribute_type="Text",
       ).id
-      cad_rich_text_id = factories.CustomAttributeDefinitionFactory(
+      cad_rich_text_id = factories.ExternalCustomAttributeDefinitionFactory(
           title="rich_text_GCA",
           definition_type="risk",
           attribute_type="Rich Text",
       ).id
-      cad_date_id = factories.CustomAttributeDefinitionFactory(
+      cad_date_id = factories.ExternalCustomAttributeDefinitionFactory(
           title="date_GCA",
           definition_type="risk",
           attribute_type="Date",
       ).id
 
-      cad_multiselect_id = factories.CustomAttributeDefinitionFactory(
+      cad_multiselect_id = factories.ExternalCustomAttributeDefinitionFactory(
           title="multiselect_GCA",
           definition_type="risk",
           attribute_type="Multiselect",
           multi_choice_options="yes,no"
       ).id
 
-      cad_dropdown_id = factories.CustomAttributeDefinitionFactory(
-          title="multiselect_GCA",
+      cad_dropdown_id = factories.ExternalCustomAttributeDefinitionFactory(
+          title="dropdown_GCA",
           definition_type="risk",
           attribute_type="Dropdown",
           multi_choice_options="one,two,three,four,five"

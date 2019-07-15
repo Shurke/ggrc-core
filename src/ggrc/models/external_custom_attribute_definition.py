@@ -8,7 +8,7 @@ from sqlalchemy.sql.schema import UniqueConstraint
 from ggrc import db
 from ggrc.models import reflection
 from ggrc.models.custom_attribute_definition \
-  import CustomAttributeDefinitionBase
+    import CustomAttributeDefinitionBase
 
 
 class ExternalCustomAttributeDefinition(CustomAttributeDefinitionBase):
@@ -82,7 +82,7 @@ class ExternalCustomAttributeDefinition(CustomAttributeDefinitionBase):
 
   def log_json(self):
     """Add extra fields to be logged in CADs."""
-    results = super(CustomAttributeDefinitionBase, self).log_json()
+    results = super(ExternalCustomAttributeDefinition, self).log_json()
     results["default_value"] = self.default_value
     results["definition_id"] = self.definition_id
     return results

@@ -66,12 +66,8 @@ class WithACLandCAFactory(ModelFactory):
   @classmethod
   def _create(cls, target_class, *args, **kwargs):
     """Create instance of model"""
-    acls = []
-    if "access_control_list_" in kwargs:
-      acls = kwargs.pop("access_control_list_")
-    cavs = []
-    if "custom_attribute_values_" in kwargs:
-      cavs = kwargs.pop("custom_attribute_values_")
+    acls = kwargs.pop("access_control_list_", [])
+    cavs = kwargs.pop("custom_attribute_values_", [])
 
     instance = target_class(**kwargs)
     db.session.add(instance)
@@ -84,24 +80,23 @@ class WithACLandCAFactory(ModelFactory):
             ac_role_id=acl.get("ac_role_id"),
             person_id=acl.get("person_id"),
         ))
-    if cavs:
+    for cav in cavs:
       if isinstance(instance, all_models.mixins.CustomAttributable):
-        for cav in cavs:
-          db.session.add(all_models.CustomAttributeValue(
-              attributable=instance,
-              attribute_value=cav.get("attribute_value"),
-              attribute_object_id=cav.get("attribute_object_id"),
-              custom_attribute_id=cav.get("custom_attribute_id"),
-          ))
+        db.session.add(all_models.CustomAttributeValue(
+            attributable=instance,
+            attribute_value=cav.get("attribute_value"),
+            attribute_object_id=cav.get("attribute_object_id"),
+            custom_attribute_id=cav.get("custom_attribute_id"),
+        ))
       elif isinstance(instance, all_models.mixins.ExternalCustomAttributable):
-        for cav in cavs:
-          db.session.add(all_models.ExternalCustomAttributeValue(
-              attributable=instance,
-              attribute_value=cav.get("attribute_value"),
-              custom_attribute_id=cav.get("custom_attribute_id"),
-          ))
+        db.session.add(all_models.ExternalCustomAttributeValue(
+            attributable=instance,
+            attribute_value=cav.get("attribute_value"),
+            custom_attribute_id=cav.get("custom_attribute_id"),
+        ))
 
-    if isinstance(instance, all_models.CustomAttributeValue):
+    if isinstance(instance, (all_models.CustomAttributeValue,
+                             all_models.ExternalCustomAttributeValue)):
       cls._log_event(instance.attributable)
     if hasattr(instance, "log_json"):
       cls._log_event(instance)
@@ -131,6 +126,39 @@ class CustomAttributeValueFactory(ModelFactory):
   attributable_type = None
   attribute_value = None
   attribute_object_id = None
+
+
+class ExternalCustomAttributeDefinitionFactory(TitledFactory):
+
+  class Meta:
+    model = all_models.ExternalCustomAttributeDefinition
+
+  definition_type = None
+  attribute_type = "Text"
+  multi_choice_options = None
+
+  @classmethod
+  def _generate_id(cls):
+    """Return next id"""
+    cls._latest_id = getattr(cls, "_latest_id", 0) + 1
+    return cls._latest_id
+
+  @classmethod
+  def _create(cls, target_class, *args, **kwargs):
+    """Assign id attribute since it is not autoincremental"""
+    return super(ExternalCustomAttributeDefinitionFactory, cls).\
+        _create(target_class, id=cls._generate_id(), *args, **kwargs)
+
+
+class ExternalCustomAttributeValueFactory(ModelFactory):
+
+  class Meta:
+    model = all_models.ExternalCustomAttributeValue
+
+  custom_attribute = None
+  attributable_id = None
+  attributable_type = None
+  attribute_value = None
 
 
 class DirectiveFactory(TitledFactory):

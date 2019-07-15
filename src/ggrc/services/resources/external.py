@@ -59,10 +59,10 @@ class ExternalResource(common.Resource):
 class ExternalCADResource(ExternalResource):
   """Resource handler for External Custom Attribute Definitions"""
 
-  def build_collection_representation(self, *args, **kwargs):
+  def build_collection_representation(self, objs, extras=None):
     """Mask external Custom attribute definitions for JSON response"""
     resp = super(ExternalCADResource, self).build_collection_representation(
-        *args, **kwargs
+        objs, extras
     )
     if "external_custom_attribute_definitions_collection" in resp:
       col = resp.pop("external_custom_attribute_definitions_collection", {})
@@ -73,9 +73,11 @@ class ExternalCADResource(ExternalResource):
       resp["custom_attribute_definitions_collection"] = col
     return resp
 
-  def object_for_json(self, *args, **kwargs):
+  def object_for_json(self, obj, model_name=None, properties_to_include=None):
     """Mask external Custom attribute definitions for JSON response"""
-    resp = super(ExternalCADResource, self).object_for_json(*args, **kwargs)
+    resp = super(ExternalCADResource, self).object_for_json(
+        obj, model_name, properties_to_include
+    )
     if "external_custom_attribute_definition" in resp:
       resp["custom_attribute_definition"] = resp.pop(
           "external_custom_attribute_definition",
@@ -87,4 +89,3 @@ class ExternalCADResource(ExternalResource):
     """DELETE operation handler."""
     del args, kwargs
     raise MethodNotAllowed()
-
