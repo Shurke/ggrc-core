@@ -36,7 +36,7 @@ def contributed_services():
       service('assessment_templates', models.AssessmentTemplate),
       service('comments', models.Comment),
       service('external_comments', models.ExternalComment),
-      service('internal_custom_attribute_definitions',
+      service('custom_attribute_definitions',
               models.CustomAttributeDefinition),
       service('external_custom_attribute_definitions',
               models.ExternalCustomAttributeDefinition,
@@ -119,58 +119,6 @@ def init_extra_services(app):
 
   from ggrc.services.suggest import suggest
   app.add_url_rule('/people/suggest', 'suggest', login_required(suggest))
-
-  init_cad_router(app)
-
-
-def init_cad_router(app):
-  """Register /api/custom_attribute_definitions endpoint with router logic"""
-  from ggrc.services import CustomAttributeDefinition as cad_service
-  from ggrc.models import all_models
-  from ggrc.models.mixins import ExternalCustomAttributable
-
-  ecad_models = {model._inflector.table_singular
-                 for model in all_models.all_models
-                 if issubclass(model, ExternalCustomAttributable)}
-
-  def router(*args, **kwargs):
-    """Route request to eCAD resource
-
-    Route request to eCAD resource if definition_type object
-    is ExternalCustomAttributable
-    """
-    from flask import request
-
-    definition_type = (
-        request.values.get("definition_type")
-    ) or (
-        request.json and
-        request.json[0].get(
-            "custom_attribute_definition", {}
-        ).get(
-            "definition_type"
-        )
-    )
-    if definition_type in ecad_models:
-      view_func = app.view_functions["ExternalCustomAttributeDefinition"]
-    else:
-      view_func = app.view_functions["CustomAttributeDefinition"]
-    return view_func(*args, **kwargs)
-
-  url = "/api/custom_attribute_definitions"
-  app.add_url_rule(
-      url,
-      defaults={cad_service.pk: None},
-      endpoint="custom_attribute_definitions_router",
-      view_func=router,
-      methods=["GET", "POST", "PATCH"])
-  app.add_url_rule(
-      "{url}/<{type}:{pk}>".format(url=url,
-                                   type=cad_service.pk_type,
-                                   pk=cad_service.pk),
-      endpoint="custom_attribute_definitions_router",
-      view_func=router,
-      methods=["GET", "PUT", "DELETE"])
 
 
 def init_all_services(app):
