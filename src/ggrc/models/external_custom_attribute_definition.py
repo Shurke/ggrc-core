@@ -25,6 +25,7 @@ class ExternalCustomAttributeDefinition(CustomAttributeDefinitionBase):
   __tablename__ = 'external_custom_attribute_definitions'
 
   id = db.Column(db.Integer, primary_key=True, autoincrement=False)
+  internal_id = db.Column(db.Integer, nullable=True, unique=True)
   external_id = db.Column(db.Integer, nullable=True, unique=True)
   definition_id = None
 
