@@ -11,6 +11,7 @@ from sqlalchemy import orm
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import foreign
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import remote
 from werkzeug.exceptions import BadRequest
 
 from ggrc import db
@@ -49,30 +50,25 @@ class ExternalCustomAttributable(CustomAttributableBase):
   @declared_attr
   def _custom_attribute_values(cls):  # pylint: disable=no-self-argument
     """Load custom attribute values"""
-    current_type = cls.__name__
+    from ggrc.models.external_custom_attribute_value \
+        import ExternalCustomAttributeValue as ecav
 
-    joinstr = (
-        "and_("
-        "foreign(remote(ExternalCustomAttributeValue.attributable_id)) == {type}.id,"
-        "ExternalCustomAttributeValue.attributable_type == '{type}'"
-        ")"
-        .format(type=current_type)
+    joinstr = lambda: sa.and_(
+        foreign(remote(ecav.attributable_id)) == cls.id,
+        ecav.attributable_type == cls.__name__
     )
 
     # Since we have some kind of generic relationship here, it is needed
     # to provide custom joinstr for backref. If default, all models having
     # this mixin will be queried, which in turn produce large number of
     # queries returning nothing and one query returning object.
-    backref_joinstr = (
-        "remote({type}.id) == foreign(ExternalCustomAttributeValue.attributable_id)"
-        .format(type=current_type)
-    )
+    backref_joinstr = lambda: remote(cls.id) == foreign(ecav.attributable_id)
 
     return db.relationship(
         "ExternalCustomAttributeValue",
         primaryjoin=joinstr,
         backref=orm.backref(
-            "{}_custom_attributable".format(current_type),
+            "{}_custom_attributable".format(cls.__name__),
             primaryjoin=backref_joinstr,
         ),
         cascade="all, delete-orphan"
@@ -258,7 +254,7 @@ class ExternalCustomAttributable(CustomAttributableBase):
     """
     # pylint: disable=too-many-locals
     from ggrc.models.external_custom_attribute_value \
-        import ExternalCustomAttributeValue as ecad
+        import ExternalCustomAttributeValue as ecav
 
     ca_values = src.get("custom_attribute_values")
     if ca_values and "attribute_value" in ca_values[0]:
@@ -282,10 +278,10 @@ class ExternalCustomAttributable(CustomAttributableBase):
     #    [ {<id of attribute definition> : attribute value, ... }, ... ]
 
     # 1) Get all custom attribute values for the CustomAttributable instance
-    attr_values = db.session.query(ecad).filter(
+    attr_values = db.session.query(ecav).filter(
         sa.and_(
-            ecad.attributable_type == self.__class__.__name__,
-            ecad.attributable_id == self.id
+            ecav.attributable_type == self.__class__.__name__,
+            ecav.attributable_id == self.id
         )
     ).all()
 
@@ -308,7 +304,7 @@ class ExternalCustomAttributable(CustomAttributableBase):
     for ad_id in attributes.keys():
       obj_type = self.__class__.__name__
       obj_id = self.id
-      new_value = ExternalCustomAttributeValue(
+      new_value = ecav(
           custom_attribute_id=int(ad_id),
           attributable=self,
           attribute_value=attributes[ad_id],

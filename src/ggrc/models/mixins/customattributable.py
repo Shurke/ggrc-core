@@ -12,6 +12,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import foreign
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import remote
 from werkzeug.exceptions import BadRequest
 
 from ggrc import builder
@@ -203,30 +204,29 @@ class CustomAttributable(CustomAttributableBase):
   @declared_attr
   def _custom_attribute_values(cls):  # pylint: disable=no-self-argument
     """Load custom attribute values"""
-    current_type = cls.__name__
+    from ggrc.models.custom_attribute_value \
+        import CustomAttributeValue as cav
 
-    joinstr = (
-        "and_("
-        "foreign(remote(CustomAttributeValue.attributable_id)) == {type}.id,"
-        "CustomAttributeValue.attributable_type == '{type}'"
-        ")"
-        .format(type=current_type)
-    )
+    def joinstr():
+      """Primary join function"""
+      return sa.and_(
+          foreign(remote(cav.attributable_id)) == cls.id,
+          cav.attributable_type == cls.__name__
+      )
 
     # Since we have some kind of generic relationship here, it is needed
     # to provide custom joinstr for backref. If default, all models having
     # this mixin will be queried, which in turn produce large number of
     # queries returning nothing and one query returning object.
-    backref_joinstr = (
-        "remote({type}.id) == foreign(CustomAttributeValue.attributable_id)"
-        .format(type=current_type)
-    )
+    def backref_joinstr():
+      """Backref join function"""
+      return remote(cls.id) == foreign(cav.attributable_id)
 
     return db.relationship(
         "CustomAttributeValue",
         primaryjoin=joinstr,
         backref=orm.backref(
-            "{}_custom_attributable".format(current_type),
+            "{}_custom_attributable".format(cls.__name__),
             primaryjoin=backref_joinstr,
         ),
         cascade="all, delete-orphan"
