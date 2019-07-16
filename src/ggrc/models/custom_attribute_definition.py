@@ -287,6 +287,12 @@ class CustomAttributeDefinition(CustomAttributeDefinitionBase):
     db.session.add(ca_definition)
     return ca_definition
 
+  def log_json(self):
+    """Add extra fields to be logged in CADs."""
+    results = super(CustomAttributeDefinition, self).log_json()
+    results["default_value"] = self.default_value
+    return results
+
   @validates("multi_choice_mandatory")
   def validate_multi_choice_mandatory(self, _, value):
     """Strip spaces around bitmas in dropdown options."""

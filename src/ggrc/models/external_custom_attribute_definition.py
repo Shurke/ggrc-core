@@ -79,3 +79,10 @@ class ExternalCustomAttributeDefinition(CustomAttributeDefinitionBase):
     else:
       self.definition_type = ''
     return setattr(self, self.definition_attr, value)
+
+  def log_json(self):
+    """Add extra fields to be logged in CADs."""
+    results = super(CustomAttributeDefinitionBase, self).log_json()
+    results["default_value"] = self.default_value
+    results["definition_id"] = self.definition_id
+    return results
