@@ -4,9 +4,9 @@
 import inspect
 import sqlalchemy as sa
 
+from ggrc.models import all_models
 from ggrc.models import inflector
 from ggrc.models import reflection
-from ggrc.models import all_models
 from ggrc.models.all_models import *  # noqa
 from ggrc.models.custom_attribute_definition import init_cad_listeners
 from ggrc.utils import html_cleaner
@@ -16,6 +16,7 @@ from ggrc.utils import benchmark
 
 
 def init_models(app):
+  """Init models."""
   for model in all_models.all_models:
     inflector.register_inflections(model._inflector)
 
@@ -64,23 +65,27 @@ def init_lazy_mixins():
 
 
 def init_session_monitor_cache():
+  """Init session cache monitor."""
   from sqlalchemy.orm.session import Session
   from sqlalchemy import event
   from ggrc.models.cache import Cache
 
   def update_cache_before_flush(session, flush_context, objects):
+    """Updates cache before flush."""
     with benchmark("update cache before flush"):
       cache = Cache.get_cache(create=True)
       if cache:
         cache.update_before_flush(session, flush_context)
 
   def update_cache_after_flush(session, flush_context):
+    """Updates cache after flush."""
     with benchmark("update cache after flush"):
       cache = Cache.get_cache(create=False)
       if cache:
         cache.update_after_flush(session, flush_context)
 
   def clear_cache(session):
+    """Clear cache."""
     cache = Cache.get_cache()
     if cache:
       cache.clear()
@@ -92,7 +97,7 @@ def init_session_monitor_cache():
 
 
 def init_sanitization_hooks():
-  # Register event listener on all String and Text attributes to sanitize them.
+  """Registers event listener on String/Text attributes."""
   for model in all_models.all_models:  # noqa
     attr_names = reflection.AttributeInfo.gather_attrs(model, "_sanitize_html")
     for attr_name in attr_names:
@@ -101,6 +106,7 @@ def init_sanitization_hooks():
 
 
 def init_app(app):
+  """Init apps."""
   init_all_models(app)
   init_lazy_mixins()
   init_session_monitor_cache()

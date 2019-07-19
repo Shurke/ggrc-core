@@ -89,6 +89,7 @@ class CustomAttributeValueBase(base.ContextRBAC,
 
   @declared_attr
   def _related_revisions(cls):  # pylint: disable=no-self-argument
+    """Returns related revisions."""
     def join_function():
       """Function to join CAV to its latest revision."""
       resource_id = foreign(Revision.resource_id)
@@ -222,7 +223,7 @@ class CustomAttributeValue(CustomAttributeValueBase):
       # We get here if "attribute_object" does not get resolved.
       # TODO: make sure None value can be set for removing CA attribute object
       # value
-      return
+      return None
     self.attribute_object_id = value.id
     return setattr(self, self._attribute_object_attr, value)
 

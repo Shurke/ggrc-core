@@ -594,11 +594,11 @@ def get_comment_data(notif, **_):
   return data
 
 
-def custom_attributes_cache(notifications):
+def custom_attributes_cache(notices):
   """Compile and return Custom Attributes
 
   Args:
-    notifications: a list of Notification instances for which to fetch the
+    notices: a list of Notification instances for which to fetch the
       corresponding CAds instances
   Returns:
     Dictionary containing all custom attributes with a definition type as a key
@@ -609,16 +609,16 @@ def custom_attributes_cache(notifications):
           models.CustomAttributeDefinition.definition_type,
           models.CustomAttributeDefinition.definition_id
       ).in_([
-          (notification.object_type, notification.object_id)
-          for notification
-          in notifications
+          (notice.object_type, notice.object_id)
+          for notice
+          in notices
       ])
   )
   for attr in definitions:
     ca_cache[attr.definition_type].append(attr)
   ext_definitions = models.ExternalCustomAttributeDefinition.query.filter(
       models.ExternalCustomAttributeDefinition.definition_type.in_(
-          set(notification.object_type for notification in notifications)
+          set(notice.object_type for notice in notices)
       )
   )
   for attr in ext_definitions:

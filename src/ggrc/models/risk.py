@@ -84,6 +84,8 @@ class Risk(synchronizable.Synchronizable,
   @validates('review_status')
   def validate_review_status(self, _, value):
     """Add explicit non-nullable validation."""
+    # pylint: disable=no-self-use
+
     if value is None:
       raise exceptions.ValidationError(
           "Review status for the object is not specified")
@@ -94,6 +96,7 @@ class Risk(synchronizable.Synchronizable,
   def validate_review_status_display_name(self, _, value):
     """Add explicit non-nullable validation."""
     # pylint: disable=no-self-use
+    # pylint: disable=invalid-name
 
     if value is None:
       raise exceptions.ValidationError(
