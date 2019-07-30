@@ -373,9 +373,6 @@ class CustomAttributable(CustomAttributableBase):
       db.session.expire_all()
 
     for definition in definitions:
-      if "_pending_delete" in definition and definition["_pending_delete"]:
-        continue
-
       definition['context'] = getattr(self, "context", None)
       self.insert_definition(definition)
 
