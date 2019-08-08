@@ -103,3 +103,11 @@ class TestControls(base.Test):
         selenium).open_widget_of_mapped_objs(product_mapped_to_control)
     assert not widget.three_bbs.option_by_text("Unmap").exists, (
         "Unmap should not be available for scope objects.")
+
+  def test_review_details_for_disabled_obj(self, control, controls_service):
+    """Check that new browser tab is displayed after clicking Review
+    Details button for objects disabled in GGRC."""
+    controls_service.open_info_page_of_obj(
+        control).click_ctrl_review_details_btn()
+    old_tab, new_tab = browsers.get_browser().windows()
+    assert old_tab.url == new_tab.url

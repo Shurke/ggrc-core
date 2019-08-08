@@ -868,6 +868,10 @@ class Controls(page_mixins.WithAssignFolder, InfoWidget):
             self.reference_urls.add_button,
             self.assign_folder_button] + list(self.inline_edit_controls)
 
+  def click_ctrl_review_details_btn(self):
+    """Click Control Review Details button."""
+    self._root.element(text="Control Review Details").click()
+
 
 class Objectives(InfoWidget):
   """Model for Objective object Info pages and Info panels."""
