@@ -8,6 +8,7 @@ import datetime
 
 import freezegun
 import ddt
+import mock
 
 from ggrc import db
 from ggrc.models import all_models
@@ -387,6 +388,16 @@ class TestAssessment(TestAssessmentBase):
         # Mapped Assignee roles should be created for all snapshots, not only
         # for control that related to assessment
         self.assert_propagated_role(role, person_email, snapshot)
+
+  @mock.patch('ggrc.models.inflector.get_model')
+  def test_assessment_when_get_model_none(self, mocked_get_model):
+    """Test get_model return None in build_type_query for json"""
+    with factories.single_commit():
+      asmt = factories.AssessmentFactory()
+
+    mocked_get_model.return_value = None
+    response = self.api.get(asmt, asmt.id)
+    self.assert200(response)
 
 
 @ddt.ddt

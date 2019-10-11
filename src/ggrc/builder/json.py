@@ -342,6 +342,11 @@ Result dispatch:
 
 def build_type_query(type_, result_spec):
   model = ggrc.models.get_model(type_)
+  if model is None:
+    logger.warning('get_model from %s is None', type_)
+    logger.warning('result_spec %s', result_spec)
+    return None, None
+
   mapper = model._sa_class_manager.mapper
   columns = []
   columns_indexes = {}
@@ -396,7 +401,7 @@ def build_type_query(type_, result_spec):
   return columns_indexes, query
 
 
-def build_stub_union_query(queries):
+def build_stub_union_query(queries):  # noqa
   results = {}
   for (type_, conditions) in queries:
     if isinstance(conditions, (int, long, str, unicode)):
@@ -415,6 +420,8 @@ def build_stub_union_query(queries):
   type_queries = {}
   for (type_, result_spec) in results.items():
     columns_indexes, query = build_type_query(type_, result_spec)
+    if columns_indexes is None or query is None:
+      continue
     type_column_indexes[type_] = columns_indexes
     type_queries[type_] = query
     if len(columns_indexes) > column_count:
