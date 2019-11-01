@@ -20,7 +20,37 @@ Licensed under http://www.apache.org/licenses/LICENSE-2.0 <see LICENSE file>
 <body {{ style.body_style() }}>
   <div {{ style.notification_container() }} >
     <div {{ style.notification_block() }}>
-    <p {{ style.notification_title() }}>{{ import_export.title|e }}</p>
+    <h2 style="
+      margin: 0;
+      padding: 0;
+      margin-bottom: 20px;
+      font-size: 16px;
+      line-height: 1.6;
+      font-weight: normal;
+    ">{{ import_export.title|e }}</h2>
+    {% if import_export.payload %}
+    <ul style="padding: 0;
+        margin-top: 0;
+        margin-bottom: 15px;
+        font-weight: normal;
+        font-size: 14px;
+        line-height: 1.6;
+        border-bottom: 1px solid #a5a5a5;
+    ">
+    {%for description in import_export.payload %}
+      <li style="
+         margin: 12px 0 12px 10px;
+         list-style-type: none;
+         font-size: 14px;
+      ">
+        <a href="{{ import_export.payload[description] }}" style="
+          text-decoration: none;
+          color: #0288D1;
+          font-style: italic;"> {{- description }} </a> were imported.
+      </li>
+    {%- endfor %}
+    </ul>
+    {% endif %}
     <p {{ style.notification_body() }}>
       {{ import_export.body }}
     </p>

@@ -30,6 +30,7 @@ from werkzeug import exceptions as wzg_exceptions
 
 from ggrc import db
 from ggrc import login
+from ggrc import models
 from ggrc import settings
 from ggrc import utils
 from ggrc.app import app
@@ -43,6 +44,7 @@ from ggrc.models import all_models
 from ggrc.models import background_task
 from ggrc.models import exceptions as models_exceptions
 from ggrc.models import import_export
+from ggrc.models import saved_search
 from ggrc.notifications import job_emails
 from ggrc.query import builder
 from ggrc.query import exceptions as query_exceptions
@@ -328,6 +330,128 @@ def run_export(task):
   return utils.make_simple_response()
 
 
+def _get_imported_objects(data):
+  """Get dict with imported objects slugs.
+
+  Obtain from imported csv a dictionary with the names of types of imported
+  objects and slugs of imported objects.
+
+  Args:
+    data: imported csv.
+
+  Returns:
+    dictionary, where keys - names of type imported objects,
+    items - list of imported objects slugs.
+  """
+  imported_objects = {}
+  for item in data:
+    if 'Object type' in item:
+      object_type_index = item.index('Object type')
+      continue
+    elif 'Code*' in item:
+      object_type = item[object_type_index]
+      imported_objects[object_type] = []
+      code_index = item.index('Code*')
+      continue
+    elif item[code_index]:
+      imported_objects[object_type].append(item[code_index])
+    else:
+      continue
+
+  return imported_objects
+
+
+def _create_saved_search_filter(obj_name, slugs):
+  """Create filter for saved search.
+
+  Create filter for saved search by names of imported object type
+  and list of imported objects slugs.
+
+  Args:
+    obj_name: name of imported object type;
+    slugs: list of imported objects slugs.
+
+  Returns:
+    dictionary with filter for current imported object.
+  """
+  saved_search_filter = {}
+  saved_search_filter["statusItem"] = None
+  saved_search_filter["mappingItems"] = []
+  saved_search_filter["filterItems"] = []
+  filter_items = saved_search_filter["filterItems"]
+  if models.get_model(obj_name).VALID_STATES:
+    filter_items.append({
+        "value": {
+            "modelName": obj_name,
+            "operator": "ANY",
+            "items": models.get_model(obj_name).VALID_STATES
+        },
+        "type": "state"
+    })
+    filter_items.append({"value": "AND", "type": "operator"})
+  value_filter_items = []
+  for slug in slugs[:-1]:
+    value_filter_items.append({
+        "value": {
+            "operator": "=",
+            "field": "Code",
+            "value": slug,
+        },
+        "type": "attribute"
+    })
+    value_filter_items.append({"value": "OR", "type": "operator"})
+  value_filter_items.append({
+      "value": {
+          "operator": "=",
+          "field": "Code",
+          "value": slugs[-1],
+      },
+      "type": "attribute"
+  })
+  filter_items.append({"value": value_filter_items, "type": "group"})
+  saved_search_filter["parentItems"] = []
+  saved_search_filter["statusItem"] = None
+
+  return saved_search_filter
+
+
+def _create_saved_searches(data, user):
+  """Create saved search for notification emails".
+
+  Create saved search to insert into import notification email.
+
+  Args:
+    data: imported csv;
+    user: information about user, who create import job.
+
+  Returns:
+    dictionary, keys - description imported object (quantity and name of type
+    of imported object), items - url for saved search.
+  """
+  NOT_SUPPORTED_OBJ = ['TASK', 'WORKFLOW']
+  imported_objs = _get_imported_objects(data)
+  search_type = "AdvancedSearch"
+  url_template = "objectBrowser#!{}&saved_search={}"
+  url_imported_objects = {}
+  for obj_name in imported_objs:
+    if obj_name not in NOT_SUPPORTED_OBJ:
+      _filter = _create_saved_search_filter(obj_name, imported_objs[obj_name])
+      sav_search = saved_search.SavedSearch(name='',
+                                            object_type=obj_name,
+                                            search_type=search_type,
+                                            user=user,
+                                            filters=_filter,
+                                            is_visible=False)
+      db.session.add(sav_search)
+      db.session.commit()
+      url_sav_search = url_template.format(obj_name.lower(), sav_search.id)
+      describe_import_obj = '{} {}'.format(len(imported_objs[obj_name]),
+                                           obj_name)
+      url_imported_objects[describe_import_obj] = url_sav_search
+
+  return url_imported_objects
+
+
 @app.route("/_background_tasks/run_import_phases", methods=["POST"])  # noqa: ignore=C901
 @background_task.queued_task
 def run_import_phases(task):
@@ -386,8 +510,9 @@ def run_import_phases(task):
       ie_job.status = "Finished"
       ie_job.end_at = datetime.utcnow()
       db.session.commit()
+      saved_searches = _create_saved_searches(csv_data, ie_job.created_by)
       job_emails.send_email(job_emails.IMPORT_COMPLETED, user.email,
-                            ie_job.title)
+                            ie_job.title, payload=saved_searches)
   except models_exceptions.ImportStoppedException:
     ie_job = import_export.get(ie_id)
     job_emails.send_email(job_emails.IMPORT_STOPPED, user.email,
