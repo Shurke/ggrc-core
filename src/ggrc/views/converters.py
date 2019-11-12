@@ -337,7 +337,7 @@ def _get_imported_objects(data):
   objects and slugs of imported objects.
 
   Args:
-    data: imported csv.
+    data: read imported CSV.
 
   Returns:
     dictionary, where keys - names of type imported objects,
