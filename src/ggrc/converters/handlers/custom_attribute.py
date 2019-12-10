@@ -174,7 +174,7 @@ class CustomAttributeColumnHandler(handlers.TextColumnHandler):
   def get_multiselect_values(self):
     """Get valid value for multiselect fields."""
     if not self.raw_value:
-      if self.mandatory:
+      if self.mandatory and not self._check_status():
         self.add_error(
             errors.MISSING_VALUE_ERROR,
             column_name=self.display_name
@@ -244,7 +244,7 @@ class CustomAttributeColumnHandler(handlers.TextColumnHandler):
     """
     if not self.mandatory and self.raw_value == "":
       return None  # ignore empty fields
-    if self.mandatory and not self.raw_value:
+    if self.mandatory and not self.raw_value and not self._check_status():
       self.add_error(errors.MISSING_VALUE_ERROR, column_name=self.display_name)
       return None
     value = models.Person.query.filter_by(email=self.raw_value).first()

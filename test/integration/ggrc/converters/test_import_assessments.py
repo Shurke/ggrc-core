@@ -1318,12 +1318,10 @@ class TestAssessmentImport(TestCase):
     ]))
     expected_response = {
         "Assessment": {
-            "row_errors": {
-                errors.MISSING_VALUE_ERROR.format(
-                    column_name="multiselect_GCA",
-                    line=3
-                ),
-            },
+            "block_errors": [],
+            "block_warnings": [],
+            "row_errors": [],
+            "row_warnings": []
         },
     }
     self._check_csv_response(response, expected_response)
@@ -1548,39 +1546,142 @@ class TestAssessmentImport(TestCase):
     self._check_csv_response(response, exp_errors)
 
   @ddt.data(
+      ("Text", "Not Started", None, []),
+      ("Text", "In Progress", None, []),
+      ("Text", "Deprecated", None, []),
       (
           "Text",
-          "Not Started",
-          []
-      ),
-      (
-          "Map:Person",
           "Verified",
+          None,
           ["Line 3: Field 'test lca' is required. The line will be ignored."]
       ),
       (
-          "Date",
-          "In Progress",
-          []
+          "Text",
+          "Completed",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
       ),
       (
-          "Rich Text",
+          "Text",
+          "In Review",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      ("Date", "Not Started", None, []),
+      ("Date", "In Progress", None, []),
+      ("Date", "Deprecated", None, []),
+      ("Date", "Verified", None, []),
+      ("Date", "Completed", None, []),
+      ("Date", "In Review", None, []),
+      ("Dropdown", "Not Started", "1,2,3", []),
+      ("Dropdown", "In Progress", "1,2,3", []),
+      ("Dropdown", "Deprecated", "1,2,3", []),
+      (
+          "Dropdown",
+          "Verified",
+          "1,2,3",
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Dropdown",
           "Completed",
+          "1,2,3",
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Dropdown",
+          "In Review",
+          "1,2,3",
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      ("Checkbox", "Not Started", None, []),
+      ("Checkbox", "In Progress", None, []),
+      ("Checkbox", "Deprecated", None, []),
+      (
+          "Checkbox",
+          "Verified",
+          None,
           ["Line 3: Field 'test lca' is required. The line will be ignored."]
       ),
       (
           "Checkbox",
-          "Deprecated",
-          []
+          "Completed",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Checkbox",
+          "In Review",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      ("Multiselect", "Not Started", "1,2,3", []),
+      ("Multiselect", "In Progress", "1,2,3", []),
+      ("Multiselect", "Deprecated", "1,2,3", []),
+      (
+          "Multiselect",
+          "Verified",
+          "1,2,3",
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Multiselect",
+          "Completed",
+          "1,2,3",
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
       ),
       (
           "Multiselect",
           "In Review",
+          "1,2,3",
           ["Line 3: Field 'test lca' is required. The line will be ignored."]
       ),
+      ("Rich Text", "Not Started", None, []),
+      ("Rich Text", "In Progress", None, []),
+      ("Rich Text", "Deprecated", None, []),
+      (
+          "Rich Text",
+          "Verified",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Rich Text",
+          "Completed",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Rich Text",
+          "In Review",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      ("Map:Person", "Not Started", None, []),
+      ("Map:Person", "In Progress", None, []),
+      ("Map:Person", "Deprecated", None, []),
+      (
+          "Map:Person",
+          "Verified",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Map:Person",
+          "Completed",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      ),
+      (
+          "Map:Person",
+          "In Review",
+          None,
+          ["Line 3: Field 'test lca' is required. The line will be ignored."]
+      )
   )
   @ddt.unpack
-  def test_import_mandatory_lca(self, type_lca, state, expected_response):
+  def test_import_mandatory_lca(self, type_lca, state, options,
+                                expected_response):
     """Test import assessments with mandatory lca"""
     with factories.single_commit():
       asmt = factories.AssessmentFactory()
@@ -1589,6 +1690,7 @@ class TestAssessmentImport(TestCase):
           definition_type='assessment',
           definition_id=asmt.id,
           attribute_type=type_lca,
+          multi_choice_options=options,
           mandatory=True
       )
 
