@@ -10,7 +10,6 @@ from mock import patch
 
 import ddt
 
-import ggrc
 from ggrc import settings
 from ggrc.app import app
 from ggrc.notifications.job_emails import send_email
@@ -54,23 +53,6 @@ class TestJobEmails(unittest.TestCase):
           self.user_email, self.subject, body
       )
 
-  def test_prepare_url_import_obj(self):
-    """Test url making for saved searches"""
-    data = {
-        '3 Assessment': 'objectBrowser#!assessment&saved_search=5',
-        '4 Audit': 'objectBrowser#!audit&saved_search=4',
-        '2 Program': 'objectBrowser#!program&saved_search=6'
-    }
-    expected_result = {
-        '2 Program': u'http://test/objectBrowser#!program&saved_search=6',
-        '4 Audit': u'http://test/objectBrowser#!audit&saved_search=4',
-        '3 Assessment': u'http://test/objectBrowser#!assessment&saved_search=5'
-    }
-    # pylint: disable=protected-access
-    with app.test_request_context(base_url='http://test'):
-      result = ggrc.notifications.job_emails._prepare_url_import_obj(data)
-      self.assertEquals(result, expected_result)
-
   def test_send_email(self):
     """Test for checking url in notification when importing"""
     payload = {
@@ -83,8 +65,6 @@ class TestJobEmails(unittest.TestCase):
         "body": "body",
         "url": u"http://test/import"
     }
-    user_email = "user@example.com"
-    subject = "title"
     with patch("ggrc.notifications.common.send_email") as common_send_email:
       data = {
           "body": template["body"],
@@ -95,6 +75,6 @@ class TestJobEmails(unittest.TestCase):
       body = settings.EMAIL_IMPORT_EXPORT.render(import_export=data)
       with app.test_request_context(base_url="http://test"):
         send_email(
-            template, user_email, filename="", ie_id=None, payload=payload
+            template, self.user_email, filename="", ie_id=None, payload=payload
         )
-      common_send_email.assert_called_with(user_email, subject, body)
+      common_send_email.assert_called_with(self.user_email, self.subject, body)

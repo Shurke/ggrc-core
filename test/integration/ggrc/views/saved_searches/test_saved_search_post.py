@@ -12,6 +12,7 @@ import ggrc
 from ggrc import db
 from ggrc.app import app
 from ggrc.models.person import Person
+from ggrc.models.saved_search import SavedSearch
 
 from integration.ggrc.models import factories
 from integration.ggrc.views.saved_searches.base import SavedSearchBaseTest
@@ -235,27 +236,27 @@ class TestSavedSearchPost(SavedSearchBaseTest):
     with factories.single_commit():
       user = factories.PersonFactory()
 
+    user_id = user.id
     data = [
         [u'Object type'],
         [u'Program', u'Code*', u'Title*'],
         [u'', u'PROGRAM-1', u'test1'],
         [u'', u'PROGRAM-2', u'test2'],
-        [u'Object type'],
-        [u'Audit', u'Code*', u'Title*'],
-        [u'', u'AUDIT-1', u'2019: test1 - Audit 1'],
-        [u'', u'AUDIT-2', u'2019: test1 - Audit 2'],
-        [u'', u'AUDIT-3', u'2019: test1 - Audit 3'],
-        [u'', u'AUDIT-4', u'2019: test2 - Audit 1'],
-        [u'Object type'],
-        [u'Assessment', u'Code*', u'Title*'],
-        [u'', u'ASSESSMENT-1', u'asmt_test1'],
-        [u'', u'ASSESSMENT-2', u'asmt_test2'],
-        [u'', u'ASSESSMENT-3', u'asmt_test2_1'],
     ]
+
+    exp_result_template = u'http://localhost/objectBrowser#!{}&saved_search={}'
     # pylint: disable=protected-access
     with mock.patch(
         'ggrc.views.converters._create_saved_searches',
         side_effect=ggrc.views.converters._create_saved_searches
     ) as mocked:
-      mocked(data, user)
+      saved_search = mocked(data, user)
       mocked.assert_called_with(data, user)
+
+    response = SavedSearch.query.filter(
+        SavedSearch.person_id == user_id
+    ).first()
+    exp_result = exp_result_template.format(response.object_type.lower(),
+                                            response.id)
+
+    self.assertEqual(saved_search.values()[0], exp_result)

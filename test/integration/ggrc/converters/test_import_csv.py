@@ -480,10 +480,6 @@ class TestBasicCsvImport(TestCase):
     """Test to get name and slugs of imported object from import csv"""
     data = [
         [u'Object type'],
-        [u'Program', u'Code*', u'Title*'],
-        [u'', u'PROGRAM-1', u'test1'],
-        [u'', u'PROGRAM-2', u'test2'],
-        [u'Object type'],
         [u'Audit', u'Code*', u'Title*'],
         [u'', u'AUDIT-1', u'2019: test1 - Audit 1'],
         [u'', u'AUDIT-2', u'2019: test1 - Audit 2'],
@@ -496,72 +492,12 @@ class TestBasicCsvImport(TestCase):
         [u'', u'ASSESSMENT-3', u'asmt_test2_1'],
     ]
     expected_result = {
-        u'Program': [u'PROGRAM-1', u'PROGRAM-2'],
         u'Audit': [u'AUDIT-1', u'AUDIT-2', u'AUDIT-3', u'AUDIT-4'],
         u'Assessment': [u'ASSESSMENT-1', u'ASSESSMENT-2', u'ASSESSMENT-3']
     }
     # pylint: disable=protected-access
     result = ggrc.views.converters._get_imported_objects(data)
     self.assertEqual(result, expected_result)
-
-  @ddt.data(
-      [u'Program', [u'PROGRAM-1', u'PROGRAM-2'],
-          {'parentItems': [],
-           'mappingItems': [],
-           'filterItems': [
-               {'type': 'state',
-                   'value': {
-                       'operator': 'ANY',
-                       'items': ('Draft', 'Active', 'Deprecated'),
-                       'modelName': u'Program'
-                   }},
-               {'type': 'operator', 'value': 'AND'},
-               {'type': 'group',
-                   'value': [
-                       {'type': 'attribute',
-                           'value': {
-                               'operator': '=',
-                               'field': 'Code',
-                               'value': u'PROGRAM-1'
-                           }},
-                       {'type': 'operator', 'value': 'OR'},
-                       {'type': 'attribute',
-                           'value': {
-                               'operator': '=',
-                               'field': 'Code',
-                               'value': u'PROGRAM-2'}}
-                   ]}],
-           'statusItem': None
-           }],
-      [u'Program', [u'PROGRAM-1'],
-          {'parentItems': [],
-           'mappingItems': [],
-           'filterItems': [
-               {'type': 'state',
-                   'value': {
-                       'operator': 'ANY',
-                       'items': ('Draft', 'Active', 'Deprecated'),
-                       'modelName': u'Program'
-                   }},
-               {'type': 'operator', 'value': 'AND'},
-               {'type': 'group',
-                   'value': [
-                       {'type': 'attribute',
-                           'value': {
-                               'operator': '=',
-                               'field': 'Code',
-                               'value': u'PROGRAM-1'
-                           }},
-                   ]}],
-           'statusItem': None
-           }],
-  )
-  @ddt.unpack
-  def test_create_saved_search_filter(self, obj_name, slugs, result):
-    """Test of mechanism creation saved search filter"""
-    # pylint: disable=protected-access
-    s_filt = ggrc.views.converters._create_saved_search_filter(obj_name, slugs)
-    self.assertEqual(s_filt, result)
 
 
 @base.with_memcache

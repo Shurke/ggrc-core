@@ -62,29 +62,9 @@ EXPORT_CRASHED_TOO_MANY_ITEMS = {
 }
 
 
-def _prepare_url_import_obj(payload):
-  """Create full url to saved search".
-
-  Create saved search to insert into import notification email.
-
-  Args:
-    payload: dictionary, keys - description imported object (quantity and name
-    of type of imported object), items - short url for saved search.
-
-  Returns:
-    dictionary, keys - description imported object (quantity and name of type
-    of imported object), items - full url for saved search.
-  """
-  for description in payload:
-    payload[description] = urljoin(utils.get_url_root(), payload[description])
-  return payload
-
-
 def send_email(template, send_to, filename="", ie_id=None, payload=None):
   """Send email"""
   subject = template["title"].format(filename=filename)
-  if payload:
-    payload = _prepare_url_import_obj(payload)
   url = urljoin(utils.get_url_root(), template["url"])
   if ie_id is not None:
     url = "{}#!&job_id={}".format(url, str(ie_id))

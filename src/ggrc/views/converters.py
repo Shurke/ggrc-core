@@ -51,6 +51,8 @@ from ggrc.query import exceptions as query_exceptions
 from ggrc.utils import benchmark
 from ggrc.utils import errors as app_errors
 from ggrc.utils import objects_cache
+from ggrc.utils import filter_links
+from ggrc.utils import saved_search_builder as ssb
 
 
 EXPORTABLES_MAP = {exportable.__name__: exportable for exportable
@@ -361,60 +363,6 @@ def _get_imported_objects(data):
   return imported_objects
 
 
-def _create_saved_search_filter(obj_name, slugs):
-  """Create filter for saved search.
-
-  Create filter for saved search by names of imported object type
-  and list of imported objects slugs.
-
-  Args:
-    obj_name: name of imported object type;
-    slugs: list of imported objects slugs.
-
-  Returns:
-    dictionary with filter for current imported object.
-  """
-  saved_search_filter = {}
-  saved_search_filter["statusItem"] = None
-  saved_search_filter["mappingItems"] = []
-  saved_search_filter["filterItems"] = []
-  filter_items = saved_search_filter["filterItems"]
-  if models.get_model(obj_name).VALID_STATES:
-    filter_items.append({
-        "value": {
-            "modelName": obj_name,
-            "operator": "ANY",
-            "items": models.get_model(obj_name).VALID_STATES
-        },
-        "type": "state"
-    })
-    filter_items.append({"value": "AND", "type": "operator"})
-  value_filter_items = []
-  for slug in slugs[:-1]:
-    value_filter_items.append({
-        "value": {
-            "operator": "=",
-            "field": "Code",
-            "value": slug,
-        },
-        "type": "attribute"
-    })
-    value_filter_items.append({"value": "OR", "type": "operator"})
-  value_filter_items.append({
-      "value": {
-          "operator": "=",
-          "field": "Code",
-          "value": slugs[-1],
-      },
-      "type": "attribute"
-  })
-  filter_items.append({"value": value_filter_items, "type": "group"})
-  saved_search_filter["parentItems"] = []
-  saved_search_filter["statusItem"] = None
-
-  return saved_search_filter
-
-
 def _create_saved_searches(data, user):
   """Create saved search for notification emails".
 
@@ -430,26 +378,31 @@ def _create_saved_searches(data, user):
   """
   NOT_SUPPORTED_OBJ = ['TASK', 'WORKFLOW']
   imported_objs = _get_imported_objects(data)
-  search_type = "AdvancedSearch"
-  url_template = "objectBrowser#!{}&saved_search={}"
-  url_imported_objects = {}
-  for obj_name in imported_objs:
-    if obj_name not in NOT_SUPPORTED_OBJ:
-      _filter = _create_saved_search_filter(obj_name, imported_objs[obj_name])
-      sav_search = saved_search.SavedSearch(name='',
-                                            object_type=obj_name,
-                                            search_type=search_type,
-                                            user=user,
-                                            filters=_filter,
-                                            is_visible=False)
+  saved_searches = {}
+  for obj_type, obj_slugs in imported_objs.iteritems():
+    if obj_type not in NOT_SUPPORTED_OBJ:
+      obj_model = models.get_model(obj_type)
+      objects_filter = ssb.SavedSearchFilter()
+      objects_filter.filter(
+          ssb.and_(
+              ssb.in_("code", obj_slugs),
+              ssb.in_("status", obj_model.VALID_STATES,
+                      model_name=obj_type),
+          )
+      )
+      sav_search = saved_search.SavedSearch.invisible(
+          object_type=obj_type,
+          user=user,
+          filters=objects_filter.as_json(),
+      )
       db.session.add(sav_search)
       db.session.commit()
-      url_sav_search = url_template.format(obj_name.lower(), sav_search.id)
-      describe_import_obj = '{} {}'.format(len(imported_objs[obj_name]),
-                                           obj_name)
-      url_imported_objects[describe_import_obj] = url_sav_search
+      url_sav_search = filter_links.construct_filter_link_for(sav_search)
+      describe_import_obj = '{} {}'.format(len(imported_objs[obj_type]),
+                                           obj_type)
+      saved_searches[describe_import_obj] = url_sav_search
 
-  return url_imported_objects
+  return saved_searches
 
 
 @app.route("/_background_tasks/run_import_phases", methods=["POST"])  # noqa: ignore=C901
