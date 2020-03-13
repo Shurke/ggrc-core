@@ -294,6 +294,11 @@ class BlockConverter(object):
     removed_count = 0
     for index, raw_header in enumerate(raw_headers):
       header = self._sanitize_header(raw_header)
+      if header == 'evidence file':
+        # Backward compatibility "Evidence File" and "Attachment" after rename
+        field_name = header_names['attachment']
+        clean_headers[field_name] = self.object_headers[field_name]
+        continue
       if header in header_names:
         field_name = header_names[header]
         if (self.operation == 'import' and

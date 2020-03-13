@@ -32,7 +32,7 @@ class WithEvidence(object):
       },
 
       "evidences_file": {
-          "display_name": "Evidence File",
+          "display_name": "Attachment",
           "type": reflection.AttributeInfo.Type.SPECIAL_MAPPING,
           "description": (
               "New line separated list of evidence links and "
