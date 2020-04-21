@@ -492,8 +492,25 @@ class CustomAttributable(CustomAttributableBase):
     data = {fname: definition.get(fname) for fname in field_names}
     data.pop("definition_type", None)
     data.pop("definition_id", None)
+    data["context"] = getattr(self, "context", None)
     data["definition"] = self
     cad = CustomAttributeDefinition(**data)
+    db.session.add(cad)
+
+  def update_definition(self, definition):
+    """Update CAD attributes
+
+    Args:
+      definition: dict with CAD attrs
+    """
+    # pylint: disable=no-self-use
+    from ggrc.models import all_models
+
+    cad_id = definition.get("id")
+    cad = all_models.CustomAttributeDefinition.query.get(cad_id)
+    for attr in definition.keys():
+      if hasattr(cad, attr) and definition[attr] != getattr(cad, attr):
+        setattr(cad, attr, definition[attr])
     db.session.add(cad)
 
   def process_definitions(self, definitions):
@@ -527,6 +544,9 @@ class CustomAttributable(CustomAttributableBase):
         {definition.get('id') for definition in definitions} -
         current_cad_ids
     )
+    cads_to_update = (
+        current_cad_ids - cads_to_remove
+    )
 
     for cad in self.custom_attribute_definitions:   # noqa pylint: disable=not-an-iterable
       # Remove CAD that is not in the definitions
@@ -535,10 +555,11 @@ class CustomAttributable(CustomAttributableBase):
         db.session.commit()
 
     for definition in definitions:
-      # Add new CAD that is not in the object
-      if definition.get("id") in cads_to_add:
-        definition['context'] = getattr(self, "context", None)
+      definition_id = definition.get("id")
+      if definition_id in cads_to_add:
         self.insert_definition(definition)
+      if definition_id in cads_to_update:
+        self.update_definition(definition)
 
   def _remove_existing_items(self, attr_values):
     """Remove existing CAV and corresponding full text records."""

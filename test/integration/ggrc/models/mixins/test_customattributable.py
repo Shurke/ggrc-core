@@ -684,3 +684,35 @@ class TestCADUpdate(TestCase):
 
     self.assertEqual(len(resp_cad), 2)
     self.assertEqual(cad_1.id, resp_cad[0]['id'])
+
+  def test_change_existed_cad(self):
+    """Test changing existed LCA Assessment Template"""
+    with factories.single_commit():
+      audit = factories.AuditFactory()
+      template = factories.AssessmentTemplateFactory(audit=audit)
+      cad = factories.CustomAttributeDefinitionFactory(
+          definition_type='assessment_template',
+          title='test_lca',
+          definition_id=template.id,
+          mandatory=False
+      )
+      cad_id = cad.id
+
+    cad = {
+        'mandatory': True,
+        'title': 'test_lca',
+        'attribute_type': 'Text',
+        'attribute_name': 'Text',
+        'definition_type': 'assessment_template',
+        'definition_id': template.id,
+        'id': cad_id
+    }
+
+    response = self.api.put(
+        template,
+        {'custom_attribute_definitions': [cad]}
+    )
+    self.assert200(response)
+
+    cad = models.CustomAttributeDefinition.query.get(cad_id)
+    self.assertEqual(cad.mandatory, True)
